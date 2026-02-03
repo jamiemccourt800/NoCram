@@ -1,0 +1,17 @@
+{
+  "name": "nocram",
+  "version": "1.0.0",
+  "description": "NoCram - Student Deadline & Workload Planner",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm start",
+    "dev": "docker-compose up",
+    "test": "echo \"Tests coming soon\" && exit 0"
+  },
+  "keywords": ["nocram", "student", "deadlines", "assignments", "planner"],
+  "author": "Jamie",
+  "license": "MIT",
+  "type": "commonjs"
+}
