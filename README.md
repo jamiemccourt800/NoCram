@@ -79,12 +79,12 @@ npm start
 - [x] Create seed data
 - [x] Set up Docker Compose
 
-### Phase 2: Backend API Setup (Not Started)
-- [ ] Initialize backend with Express
-- [ ] Authentication (JWT)
-- [ ] Module routes
-- [ ] Assignment routes
-- [ ] Dashboard endpoint
+### Phase 2: Backend API Setup (Completed)
+- [x] Initialize backend with Express
+- [x] Authentication (JWT)
+- [x] Module routes
+- [x] Assignment routes
+- [x] Dashboard endpoint
 
 ### Phase 3: Frontend Setup (Not Started)
 - [ ] Create React app
