@@ -86,12 +86,12 @@ npm start
 - [x] Assignment routes
 - [x] Dashboard endpoint
 
-### Phase 3: Frontend Setup (Not Started)
-- [ ] Create React app
-- [ ] Authentication UI
-- [ ] Dashboard page
-- [ ] Module management
-- [ ] Assignment management
+### Phase 3: Frontend Setup (Completed)
+- [x] Create React app
+- [x] Authentication UI
+- [x] Dashboard page
+- [x] Module management
+- [x] Assignment management
 
 ### Phase 4: PWA Features (Not Started)
 - [ ] Service worker
