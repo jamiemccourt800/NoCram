@@ -4,7 +4,7 @@
 
 A Progressive Web App (PWA) that helps students manage deadlines, assignments, and workload across all modules.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Node.js 18+
@@ -44,31 +44,31 @@ cp .env.example .env
 npm start
 ```
 
-## 📚 Documentation
+## Documentation
 - [Architecture](./docs/architecture.md) (coming soon)
 - [API Documentation](./docs/api.md) (coming soon)
 - [Database Schema](./database/schema.sql)
 
-## 🛠️ Tech Stack
+## Tech Stack
 - **Frontend:** React, React Router, Bootstrap, PWA
 - **Backend:** Node.js, Express, JWT Authentication
 - **Database:** PostgreSQL
 - **DevOps:** Docker, Docker Compose, GitHub Actions
 
-## 📋 Features
-- ✅ User authentication (signup/login)
-- ✅ Module management
-- ✅ Assignment tracking with deadlines
-- ✅ Dashboard with upcoming & overdue assignments
-- ✅ Workload visualization
-- 🚧 Automatic reminders (email/push notifications)
-- 🚧 Calendar view
-- 🚧 PWA offline support
-- 🚧 Mobile-responsive design
+## Features
+- User authentication (signup/login)
+- Module management
+- Assignment tracking with deadlines
+- Dashboard with upcoming & overdue assignments
+- Workload visualization
+- Automatic reminders (email/push notifications) - In Progress
+- Calendar view - In Progress
+- PWA offline support - In Progress
+- Mobile-responsive design - In Progress
 
-## 🧪 Development Status
+## Development Status
 
-### Phase 0: Pre-Development Setup ✅ (Completed)
+### Phase 0: Pre-Development Setup (Completed)
 - [x] Environment setup
 - [x] Project initialization
 - [x] Git repository
@@ -109,11 +109,11 @@ npm start
 ### Phase 7: Deployment (Not Started)
 - [ ] Production deployment
 
-## 📝 License
+## License
 MIT
 
-## 👤 Author
+## Author
 Jamie - NoCram Student Planner
 
-## 🤝 Contributing
+## Contributing
 This is a personal project, but suggestions are welcome!
