@@ -22,21 +22,43 @@ services:
     networks:
       - nocram-network
 
-  # Server and client will be added in later phases
-  # Uncomment when ready:
-  # server:
-  #   build: ./server
-  #   container_name: nocram-server
-  #   ports:
-  #     - "4000:4000"
-  #   environment:
-  #     - NODE_ENV=development
-  #     - DATABASE_URL=postgresql://nocram:nocram_dev_pass@postgres:5432/nocram_dev
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   networks:
-  #     - nocram-network
+  server:
+    build: 
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: nocram-server
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - DATABASE_URL=postgresql://nocram:nocram_dev_pass@postgres:5432/nocram_dev
+      - JWT_SECRET=nocram-dev-secret-key-2026-change-in-production
+      - JWT_EXPIRES_IN=15m
+      - REFRESH_TOKEN_SECRET=nocram-dev-refresh-secret-2026-change-in-production
+      - REFRESH_TOKEN_EXPIRES_IN=7d
+      - CLIENT_URL=http://localhost:3000
+      - CORS_ORIGIN=http://localhost:3000
+      - REMINDER_CRON_SCHEDULE=0 9 * * *
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nocram-network
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: nocram-client
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+    networks:
+      - nocram-network
+    restart: unless-stopped
 
   # client:
   #   build: ./client

@@ -48,6 +48,7 @@ npm start
 - [Architecture](./docs/architecture.md) (coming soon)
 - [API Documentation](./docs/api.md) (coming soon)
 - [Database Schema](./database/schema.sql)
+- [Docker Deployment Guide](./docs/DOCKER.md)
 
 ## Tech Stack
 - **Frontend:** React, React Router, Bootstrap, PWA
@@ -131,9 +132,12 @@ npm start
 - [x] Notification preferences UI
 - [x] Manual reminder trigger endpoint
 
-### Phase 6: DevOps (Not Started)
-- [ ] Docker containerization
-- [ ] CI/CD pipeline
+### Phase 6: DevOps (Completed)
+- [x] Docker containerization for all services
+- [x] Docker Compose orchestration
+- [x] GitHub Actions CI/CD pipeline
+- [x] Production environment templates
+- [x] Docker deployment documentation
 
 ### Phase 7: Deployment (Not Started)
 - [ ] Production deployment
