@@ -87,6 +87,14 @@ function Dashboard() {
           <span className="navbar-brand mb-0 h1">NoCram</span>
           <div>
             <span className="me-3">Welcome, {user?.name || user?.email}</span>
+            <Button 
+              variant="outline-primary" 
+              size="sm" 
+              className="me-2"
+              onClick={() => navigate('/settings')}
+            >
+              Settings
+            </Button>
             <Button variant="outline-secondary" size="sm" onClick={handleLogout}>
               Logout
             </Button>

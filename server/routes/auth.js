@@ -125,8 +125,12 @@ router.post('/login', async (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, email, name, timezone, semester_start, semester_end, created_at 
-       FROM users WHERE id = $1`,
+      `SELECT 
+        u.id, u.email, u.name, u.timezone, u.semester_start, u.semester_end, u.created_at,
+        np.email_enabled, np.days_before, np.reminder_time
+       FROM users u
+       LEFT JOIN notification_preferences np ON u.id = np.user_id
+       WHERE u.id = $1`,
       [req.user.id]
     );
 
@@ -134,9 +138,53 @@ router.get('/me', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ user: result.rows[0] });
+    const user = result.rows[0];
+    
+    res.json({ 
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        timezone: user.timezone,
+        semester_start: user.semester_start,
+        semester_end: user.semester_end,
+        created_at: user.created_at,
+      },
+      notification_preferences: {
+        email_enabled: user.email_enabled,
+        days_before: user.days_before,
+        reminder_time: user.reminder_time
+      }
+    });
   } catch (error) {
     console.error('Get user error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /api/auth/notification-preferences - Update notification preferences
+router.put('/notification-preferences', authenticateToken, async (req, res) => {
+  const { email_enabled, days_before, reminder_time } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE notification_preferences 
+       SET email_enabled = $1, days_before = $2, reminder_time = $3, updated_at = NOW()
+       WHERE user_id = $4
+       RETURNING email_enabled, days_before, reminder_time`,
+      [email_enabled, days_before, reminder_time, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Preferences not found' });
+    }
+
+    res.json({ 
+      success: true,
+      preferences: result.rows[0] 
+    });
+  } catch (error) {
+    console.error('Error updating preferences:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

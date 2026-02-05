@@ -124,9 +124,12 @@ npm start
 - [x] App manifest configuration
 - [x] PWA meta tags
 
-### Phase 5: Background Jobs (Not Started)
-- [ ] Email reminders
-- [ ] Push notifications
+### Phase 5: Background Jobs (Completed)
+- [x] Email service with Nodemailer
+- [x] Reminder scheduler with node-cron
+- [x] Deadline checking logic
+- [x] Notification preferences UI
+- [x] Manual reminder trigger endpoint
 
 ### Phase 6: DevOps (Not Started)
 - [ ] Docker containerization

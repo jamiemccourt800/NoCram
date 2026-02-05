@@ -7,6 +7,8 @@ const authRoutes = require('./routes/auth');
 const moduleRoutes = require('./routes/modules');
 const assignmentRoutes = require('./routes/assignments');
 const dashboardRoutes = require('./routes/dashboard');
+const reminderRoutes = require('./routes/reminders');
+const { initReminderScheduler } = require('./services/reminderService');
 
 const app = express();
 
@@ -34,6 +36,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reminders', reminderRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -55,4 +58,7 @@ app.listen(PORT, () => {
   console.log(`🚀 NoCram API server running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Initialize reminder scheduler
+  initReminderScheduler();
 });
