@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: nocram-postgres
+    environment:
+      POSTGRES_DB: nocram_dev
+      POSTGRES_USER: nocram
+      POSTGRES_PASSWORD: nocram_dev_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./database/seeds/sample_data.sql:/docker-entrypoint-initdb.d/2-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nocram -d nocram_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nocram-network
+
+  # Server and client will be added in later phases
+  # Uncomment when ready:
+  # server:
+  #   build: ./server
+  #   container_name: nocram-server
+  #   ports:
+  #     - "4000:4000"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - DATABASE_URL=postgresql://nocram:nocram_dev_pass@postgres:5432/nocram_dev
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - nocram-network
+
+  # client:
+  #   build: ./client
+  #   container_name: nocram-client
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - REACT_APP_API_URL=http://localhost:4000/api
+  #   networks:
+  #     - nocram-network
+
+volumes:
+  postgres_data:
+
+networks:
+  nocram-network:
+    driver: bridge

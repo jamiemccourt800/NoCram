@@ -74,10 +74,10 @@ npm start
 - [x] Git repository
 - [x] Folder structure
 
-### Phase 1: Database Setup (In Progress)
-- [ ] Create database schema
-- [ ] Create seed data
-- [ ] Set up Docker Compose
+### Phase 1: Database Setup (Completed)
+- [x] Create database schema
+- [x] Create seed data
+- [x] Set up Docker Compose
 
 ### Phase 2: Backend API Setup (Not Started)
 - [ ] Initialize backend with Express
