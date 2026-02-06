@@ -37,6 +37,20 @@ function Dashboard() {
   // Form validation errors
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    module_id: '',
+    due_date: '',
+    due_time: '',
+    weighting_percent: '',
+    estimated_hours: '',
+    description: '',
+    status: 'not_started'
+  });
+
   useEffect(() => {
     loadDashboard();
     loadModules();
@@ -207,6 +221,138 @@ function Dashboard() {
     }
   };
 
+  const handleOpenEditModal = (assignment) => {
+    // Format due date and time
+    const dueDate = new Date(assignment.due_date);
+    const dateStr = dueDate.toISOString().split('T')[0];
+    const timeStr = dueDate.toTimeString().substring(0, 5);
+
+    setEditingAssignment(assignment);
+    setEditFormData({
+      title: assignment.title || '',
+      module_id: assignment.module_id || '',
+      due_date: dateStr,
+      due_time: timeStr,
+      weighting_percent: assignment.weighting_percent || '',
+      estimated_hours: assignment.estimated_hours || '',
+      description: assignment.description || '',
+      status: assignment.status || 'not_started'
+    });
+    setValidationErrors({});
+    setFormError('');
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingAssignment(null);
+    setFormError('');
+    setValidationErrors({});
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateEditForm = () => {
+    const errors = {};
+
+    if (!editFormData.title || editFormData.title.trim().length === 0) {
+      errors.title = 'Title is required';
+    } else if (editFormData.title.length > 500) {
+      errors.title = 'Title must be 500 characters or less';
+    }
+
+    if (!editFormData.due_date) {
+      errors.due_date = 'Due date is required';
+    }
+
+    if (editFormData.weighting_percent !== '') {
+      const weighting = parseFloat(editFormData.weighting_percent);
+      if (isNaN(weighting) || weighting < 0 || weighting > 100) {
+        errors.weighting_percent = 'Weighting must be between 0 and 100';
+      }
+    }
+
+    if (editFormData.estimated_hours !== '') {
+      const hours = parseFloat(editFormData.estimated_hours);
+      if (isNaN(hours) || hours < 0) {
+        errors.estimated_hours = 'Estimated hours must be a positive number';
+      }
+    }
+
+    if (editFormData.description && editFormData.description.length > 2000) {
+      errors.description = 'Description must be 2000 characters or less';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setFormError('');
+
+    if (!validateEditForm()) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const dueDateTime = new Date(`${editFormData.due_date}T${editFormData.due_time}`);
+      
+      const payload = {
+        title: editFormData.title.trim(),
+        module_id: editFormData.module_id || null,
+        due_date: dueDateTime.toISOString(),
+        weighting_percent: editFormData.weighting_percent ? parseFloat(editFormData.weighting_percent) : null,
+        estimated_hours: editFormData.estimated_hours ? parseFloat(editFormData.estimated_hours) : null,
+        description: editFormData.description.trim() || null,
+        status: editFormData.status
+      };
+
+      await assignments.update(editingAssignment.id, payload);
+
+      setSuccessMessage('✅ Assignment updated successfully!');
+      
+      await loadDashboard();
+
+      setTimeout(() => {
+        handleCloseEditModal();
+        setSuccessMessage('');
+      }, 2000);
+
+    } catch (err) {
+      console.error('Error updating assignment:', err);
+      if (err.response?.status === 400) {
+        setFormError(err.response.data.error || 'Invalid input. Please check your data.');
+      } else if (err.response?.status === 401) {
+        setFormError('Session expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setFormError('Assignment not found.');
+      } else {
+        setFormError('Unable to update assignment. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -366,7 +512,14 @@ function Dashboard() {
                         </div>
                         <div className="text-end ms-3">
                           <div className="mb-2">{getStatusBadge(assignment.status)}</div>
-                          <small className="text-muted">📅 {formatDate(assignment.due_date)}</small>
+                          <small className="text-muted d-block mb-2">📅 {formatDate(assignment.due_date)}</small>
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => handleOpenEditModal(assignment)}
+                          >
+                            ✏️ Edit
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -399,7 +552,14 @@ function Dashboard() {
                         </div>
                         <div className="text-end ms-3">
                           <div className="mb-2">{getStatusBadge(assignment.status)}</div>
-                          <small className="text-danger fw-bold">⏰ {formatDate(assignment.due_date)}</small>
+                          <small className="text-danger fw-bold d-block mb-2">⏰ {formatDate(assignment.due_date)}</small>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() => handleOpenEditModal(assignment)}
+                          >
+                            ✏️ Edit
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -619,6 +779,204 @@ function Dashboard() {
                   </>
                 ) : (
                   '✨ Create Assignment'
+                )}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* Edit Assignment Modal */}
+      <Modal show={showEditModal} onHide={handleCloseEditModal} size="lg" centered>
+        <Modal.Header closeButton className="border-0">
+          <Modal.Title>
+            <span className="gradient-text">✏️ Edit Assignment</span>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          {formError && (
+            <Alert variant="danger" className="alert-custom mb-3">
+              {formError}
+            </Alert>
+          )}
+
+          <Form onSubmit={handleEditSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label className="form-label-custom">
+                Title <span className="text-danger">*</span>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                name="title"
+                value={editFormData.title}
+                onChange={handleEditInputChange}
+                maxLength={500}
+                isInvalid={!!validationErrors.title}
+                className="form-control-custom"
+              />
+              <Form.Control.Feedback type="invalid">
+                {validationErrors.title}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label className="form-label-custom">Module</Form.Label>
+              <Form.Select
+                name="module_id"
+                value={editFormData.module_id}
+                onChange={handleEditInputChange}
+                className="form-control-custom"
+              >
+                <option value="">No module</option>
+                {modules.map(module => (
+                  <option key={module.id} value={module.id}>
+                    {module.icon} {module.name} {module.code && `(${module.code})`}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
+            <Row className="mb-3">
+              <Col md={7}>
+                <Form.Group>
+                  <Form.Label className="form-label-custom">
+                    Due Date <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="date"
+                    name="due_date"
+                    value={editFormData.due_date}
+                    onChange={handleEditInputChange}
+                    isInvalid={!!validationErrors.due_date}
+                    className="form-control-custom"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {validationErrors.due_date}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+              <Col md={5}>
+                <Form.Group>
+                  <Form.Label className="form-label-custom">Due Time</Form.Label>
+                  <Form.Control
+                    type="time"
+                    name="due_time"
+                    value={editFormData.due_time}
+                    onChange={handleEditInputChange}
+                    className="form-control-custom"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="form-label-custom">Weighting %</Form.Label>
+                  <Form.Control
+                    type="number"
+                    name="weighting_percent"
+                    value={editFormData.weighting_percent}
+                    onChange={handleEditInputChange}
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    isInvalid={!!validationErrors.weighting_percent}
+                    className="form-control-custom"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {validationErrors.weighting_percent}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="form-label-custom">Estimated Hours</Form.Label>
+                  <Form.Control
+                    type="number"
+                    name="estimated_hours"
+                    value={editFormData.estimated_hours}
+                    onChange={handleEditInputChange}
+                    min="0"
+                    step="0.5"
+                    isInvalid={!!validationErrors.estimated_hours}
+                    className="form-control-custom"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {validationErrors.estimated_hours}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Form.Group className="mb-3">
+              <Form.Label className="form-label-custom">Status</Form.Label>
+              <Form.Select
+                name="status"
+                value={editFormData.status}
+                onChange={handleEditInputChange}
+                className="form-control-custom"
+              >
+                <option value="not_started">Not Started</option>
+                <option value="in_progress">In Progress</option>
+                <option value="done">Done</option>
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-4">
+              <Form.Label className="form-label-custom">Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={4}
+                name="description"
+                value={editFormData.description}
+                onChange={handleEditInputChange}
+                maxLength={2000}
+                isInvalid={!!validationErrors.description}
+                className="form-control-custom"
+              />
+              <Form.Control.Feedback type="invalid">
+                {validationErrors.description}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Alert variant="info" className="mb-4 border-0" style={{backgroundColor: '#e0f2fe'}}>
+              <div className="d-flex align-items-start gap-2">
+                <span>💡</span>
+                <small>
+                  <strong>Reminder Updates:</strong> If you change the due date, 
+                  email reminders will be automatically updated.
+                </small>
+              </div>
+            </Alert>
+
+            <div className="d-flex gap-2 justify-content-end">
+              <Button 
+                variant="outline-secondary" 
+                onClick={handleCloseEditModal}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="btn-gradient-primary"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Saving...
+                  </>
+                ) : (
+                  '💾 Save Changes'
                 )}
               </Button>
             </div>

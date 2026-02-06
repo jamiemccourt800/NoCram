@@ -136,6 +136,16 @@ router.put('/:id', async (req, res) => {
   const { module_id, title, description, due_date, weighting_percent, estimated_hours, status } = req.body;
 
   try {
+    // Get current assignment to check if due_date changed
+    const currentAssignment = await pool.query(
+      'SELECT due_date FROM assignments WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.user.id]
+    );
+
+    if (currentAssignment.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+
     const result = await pool.query(
       `UPDATE assignments 
        SET module_id = COALESCE($1, module_id),
@@ -155,7 +165,21 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Assignment not found' });
     }
 
-    res.json({ assignment: result.rows[0] });
+    const updatedAssignment = result.rows[0];
+
+    // If due_date changed, update reminders
+    if (due_date && new Date(due_date).getTime() !== new Date(currentAssignment.rows[0].due_date).getTime()) {
+      // Delete existing reminders that haven't been sent
+      await pool.query(
+        'DELETE FROM reminders WHERE assignment_id = $1 AND sent = false',
+        [req.params.id]
+      );
+
+      // Create new reminders with updated due date
+      await createReminders(req.params.id, req.user.id, due_date);
+    }
+
+    res.json({ assignment: updatedAssignment });
   } catch (error) {
     console.error('Update assignment error:', error);
     res.status(500).json({ error: 'Server error' });

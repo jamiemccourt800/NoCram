@@ -1,6 +1,6 @@
 // client/src/pages/Assignments.js
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Badge, Spinner, Alert, Button, Form, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Badge, Spinner, Alert, Button, Form, InputGroup, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { assignments as assignmentsApi, modules as modulesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +15,7 @@ function Assignments() {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Filter and search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +23,23 @@ function Assignments() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    module_id: '',
+    due_date: '',
+    due_time: '',
+    weighting_percent: '',
+    estimated_hours: '',
+    description: '',
+    status: 'not_started'
+  });
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
     loadData();
@@ -122,6 +140,148 @@ function Assignments() {
 
   const hasActiveFilters = () => {
     return searchQuery || filterModule || filterStatus || filterDateFrom || filterDateTo;
+  };
+
+  const handleOpenEditModal = (assignment) => {
+    // Format due date and time
+    const dueDate = new Date(assignment.due_date);
+    const dateStr = dueDate.toISOString().split('T')[0];
+    const timeStr = dueDate.toTimeString().substring(0, 5);
+
+    setEditingAssignment(assignment);
+    setEditFormData({
+      title: assignment.title || '',
+      module_id: assignment.module_id || '',
+      due_date: dateStr,
+      due_time: timeStr,
+      weighting_percent: assignment.weighting_percent || '',
+      estimated_hours: assignment.estimated_hours || '',
+      description: assignment.description || '',
+      status: assignment.status || 'not_started'
+    });
+    setValidationErrors({});
+    setFormError('');
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingAssignment(null);
+    setFormError('');
+    setValidationErrors({});
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear validation error for this field
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateEditForm = () => {
+    const errors = {};
+
+    // Title validation
+    if (!editFormData.title || editFormData.title.trim().length === 0) {
+      errors.title = 'Title is required';
+    } else if (editFormData.title.length > 500) {
+      errors.title = 'Title must be 500 characters or less';
+    }
+
+    // Due date validation
+    if (!editFormData.due_date) {
+      errors.due_date = 'Due date is required';
+    }
+
+    // Weighting validation
+    if (editFormData.weighting_percent !== '') {
+      const weighting = parseFloat(editFormData.weighting_percent);
+      if (isNaN(weighting) || weighting < 0 || weighting > 100) {
+        errors.weighting_percent = 'Weighting must be between 0 and 100';
+      }
+    }
+
+    // Estimated hours validation
+    if (editFormData.estimated_hours !== '') {
+      const hours = parseFloat(editFormData.estimated_hours);
+      if (isNaN(hours) || hours < 0) {
+        errors.estimated_hours = 'Estimated hours must be a positive number';
+      }
+    }
+
+    // Description validation
+    if (editFormData.description && editFormData.description.length > 2000) {
+      errors.description = 'Description must be 2000 characters or less';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setFormError('');
+
+    if (!validateEditForm()) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      // Combine date and time into ISO format
+      const dueDateTime = new Date(`${editFormData.due_date}T${editFormData.due_time}`);
+      
+      const payload = {
+        title: editFormData.title.trim(),
+        module_id: editFormData.module_id || null,
+        due_date: dueDateTime.toISOString(),
+        weighting_percent: editFormData.weighting_percent ? parseFloat(editFormData.weighting_percent) : null,
+        estimated_hours: editFormData.estimated_hours ? parseFloat(editFormData.estimated_hours) : null,
+        description: editFormData.description.trim() || null,
+        status: editFormData.status
+      };
+
+      await assignmentsApi.update(editingAssignment.id, payload);
+
+      // Show success message
+      setSuccessMessage('✅ Assignment updated successfully! Reminders have been updated if due date changed.');
+      
+      // Reload data
+      await loadData();
+
+      // Close modal after short delay
+      setTimeout(() => {
+        handleCloseEditModal();
+        setSuccessMessage('');
+      }, 2000);
+
+    } catch (err) {
+      console.error('Error updating assignment:', err);
+      if (err.response?.status === 400) {
+        setFormError(err.response.data.error || 'Invalid input. Please check your data.');
+      } else if (err.response?.status === 401) {
+        setFormError('Session expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setFormError('Assignment not found.');
+      } else {
+        setFormError('Unable to update assignment. Please check your internet connection and try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleLogout = () => {
@@ -228,6 +388,12 @@ function Assignments() {
         {error && (
           <Alert variant="danger" className="alert-custom mb-4">
             {error}
+          </Alert>
+        )}
+
+        {successMessage && (
+          <Alert variant="success" className="alert-custom fade-in mb-4">
+            {successMessage}
           </Alert>
         )}
 
@@ -437,16 +603,24 @@ function Assignments() {
                           </div>
                         </Col>
 
-                        {/* Right: Status */}
+                        {/* Right: Status and Actions */}
                         <Col md={3} className="text-end">
                           <div className="mb-3">
                             {getStatusBadge(assignment.status, assignment.due_date)}
                           </div>
                           {assignment.status === 'done' && assignment.completed_at && (
-                            <small className="text-success d-block">
+                            <small className="text-success d-block mb-2">
                               ✓ Completed {new Date(assignment.completed_at).toLocaleDateString()}
                             </small>
                           )}
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => handleOpenEditModal(assignment)}
+                            className="mt-2"
+                          >
+                            ✏️ Edit
+                          </Button>
                         </Col>
                       </Row>
                     </Card.Body>
@@ -489,6 +663,230 @@ function Assignments() {
           </Card>
         )}
       </Container>
+
+      {/* Edit Assignment Modal */}
+      <Modal show={showEditModal} onHide={handleCloseEditModal} size="lg" centered>
+        <Modal.Header closeButton className="border-0">
+          <Modal.Title>
+            <span className="gradient-text">✏️ Edit Assignment</span>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          {formError && (
+            <Alert variant="danger" className="alert-custom mb-3">
+              {formError}
+            </Alert>
+          )}
+
+          {successMessage && (
+            <Alert variant="success" className="alert-custom mb-3">
+              {successMessage}
+            </Alert>
+          )}
+
+          <Form onSubmit={handleEditSubmit}>
+            {/* Title */}
+            <Form.Group className="mb-3">
+              <Form.Label className="form-label-custom">
+                Title <span className="text-danger">*</span>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                name="title"
+                value={editFormData.title}
+                onChange={handleEditInputChange}
+                placeholder="e.g., Essay on Climate Change"
+                maxLength={500}
+                isInvalid={!!validationErrors.title}
+                className="form-control-custom"
+                autoFocus
+              />
+              <Form.Control.Feedback type="invalid">
+                {validationErrors.title}
+              </Form.Control.Feedback>
+              <Form.Text className="text-muted">
+                {editFormData.title.length}/500 characters
+              </Form.Text>
+            </Form.Group>
+
+            {/* Module */}
+            <Form.Group className="mb-3">
+              <Form.Label className="form-label-custom">Module</Form.Label>
+              <Form.Select
+                name="module_id"
+                value={editFormData.module_id}
+                onChange={handleEditInputChange}
+                className="form-control-custom"
+              >
+                <option value="">No module (standalone assignment)</option>
+                {modules.map(module => (
+                  <option key={module.id} value={module.id}>
+                    {module.icon} {module.name} {module.code && `(${module.code})`}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
+            {/* Due Date and Time Row */}
+            <Row className="mb-3">
+              <Col md={7}>
+                <Form.Group>
+                  <Form.Label className="form-label-custom">
+                    Due Date <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    type="date"
+                    name="due_date"
+                    value={editFormData.due_date}
+                    onChange={handleEditInputChange}
+                    isInvalid={!!validationErrors.due_date}
+                    className="form-control-custom"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {validationErrors.due_date}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+              <Col md={5}>
+                <Form.Group>
+                  <Form.Label className="form-label-custom">Due Time</Form.Label>
+                  <Form.Control
+                    type="time"
+                    name="due_time"
+                    value={editFormData.due_time}
+                    onChange={handleEditInputChange}
+                    className="form-control-custom"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            {/* Weighting and Estimated Hours Row */}
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="form-label-custom">Weighting %</Form.Label>
+                  <Form.Control
+                    type="number"
+                    name="weighting_percent"
+                    value={editFormData.weighting_percent}
+                    onChange={handleEditInputChange}
+                    placeholder="e.g., 25"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    isInvalid={!!validationErrors.weighting_percent}
+                    className="form-control-custom"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {validationErrors.weighting_percent}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="form-label-custom">Estimated Hours</Form.Label>
+                  <Form.Control
+                    type="number"
+                    name="estimated_hours"
+                    value={editFormData.estimated_hours}
+                    onChange={handleEditInputChange}
+                    placeholder="e.g., 5.5"
+                    min="0"
+                    step="0.5"
+                    isInvalid={!!validationErrors.estimated_hours}
+                    className="form-control-custom"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {validationErrors.estimated_hours}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            {/* Status */}
+            <Form.Group className="mb-3">
+              <Form.Label className="form-label-custom">Status</Form.Label>
+              <Form.Select
+                name="status"
+                value={editFormData.status}
+                onChange={handleEditInputChange}
+                className="form-control-custom"
+              >
+                <option value="not_started">Not Started</option>
+                <option value="in_progress">In Progress</option>
+                <option value="done">Done</option>
+              </Form.Select>
+            </Form.Group>
+
+            {/* Description */}
+            <Form.Group className="mb-4">
+              <Form.Label className="form-label-custom">Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={4}
+                name="description"
+                value={editFormData.description}
+                onChange={handleEditInputChange}
+                placeholder="Add any notes, requirements, or details about this assignment..."
+                maxLength={2000}
+                isInvalid={!!validationErrors.description}
+                className="form-control-custom"
+              />
+              <Form.Control.Feedback type="invalid">
+                {validationErrors.description}
+              </Form.Control.Feedback>
+              <Form.Text className="text-muted">
+                {editFormData.description.length}/2000 characters
+              </Form.Text>
+            </Form.Group>
+
+            {/* Info Box */}
+            <Alert variant="info" className="mb-4 border-0" style={{backgroundColor: '#e0f2fe'}}>
+              <div className="d-flex align-items-start gap-2">
+                <span>💡</span>
+                <small>
+                  <strong>Automatic Reminder Updates:</strong> If you change the due date, 
+                  your email reminders will be automatically updated to 7 days, 2 days, 
+                  and 1 day before the new due date.
+                </small>
+              </div>
+            </Alert>
+
+            {/* Action Buttons */}
+            <div className="d-flex gap-2 justify-content-end">
+              <Button 
+                variant="outline-secondary" 
+                onClick={handleCloseEditModal}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="btn-gradient-primary"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Saving...
+                  </>
+                ) : (
+                  '💾 Save Changes'
+                )}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </>
   );
 }
