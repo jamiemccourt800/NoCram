@@ -190,19 +190,12 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id/status', async (req, res) => {
   const { status } = req.body;
 
-  console.log('PATCH /api/assignments/:id/status called');
-  console.log('Assignment ID:', req.params.id);
-  console.log('User ID:', req.user.id);
-  console.log('Status:', status);
-
   try {
     if (!status) {
-      console.log('ERROR: No status provided');
       return res.status(400).json({ error: 'Status is required' });
     }
 
     if (!['not_started', 'in_progress', 'done'].includes(status)) {
-      console.log('ERROR: Invalid status value:', status);
       return res.status(400).json({ error: 'Invalid status' });
     }
 
@@ -215,14 +208,10 @@ router.patch('/:id/status', async (req, res) => {
       [status, req.params.id, req.user.id]
     );
 
-    console.log('Query result rows:', result.rows.length);
-
     if (result.rows.length === 0) {
-      console.log('ERROR: Assignment not found');
       return res.status(404).json({ error: 'Assignment not found' });
     }
 
-    console.log('SUCCESS: Status updated to', status);
     res.json({ assignment: result.rows[0] });
   } catch (error) {
     console.error('Update status error:', error);

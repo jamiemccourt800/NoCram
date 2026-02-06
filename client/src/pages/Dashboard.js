@@ -708,7 +708,7 @@ function Dashboard() {
                               {assignment.status === 'done' && '✓ '}{assignment.title}
                             </div>
                             <div className="assignment-meta">
-                              📚 {assignment.module_name}
+                              📚 {assignment.module_name} {assignment.module_code && `(${assignment.module_code})`}
                             </div>
                             {assignment.status === 'done' && assignment.completed_at && (
                               <div className="text-success small mt-1">
