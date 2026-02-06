@@ -51,6 +51,11 @@ function Dashboard() {
     status: 'not_started'
   });
 
+  // Delete confirmation state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingAssignment, setDeletingAssignment] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     loadDashboard();
     loadModules();
@@ -353,6 +358,53 @@ function Dashboard() {
     }
   };
 
+  const handleOpenDeleteModal = (assignment) => {
+    setDeletingAssignment(assignment);
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeletingAssignment(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingAssignment) return;
+
+    try {
+      setDeleting(true);
+
+      await assignments.delete(deletingAssignment.id);
+
+      setSuccessMessage(`✅ "${deletingAssignment.title}" deleted successfully. Associated reminders were also removed.`);
+      
+      await loadDashboard();
+
+      handleCloseDeleteModal();
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 4000);
+
+    } catch (err) {
+      console.error('Error deleting assignment:', err);
+      if (err.response?.status === 401) {
+        setError('Session expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setError('Assignment not found. It may have already been deleted.');
+        handleCloseDeleteModal();
+        await loadDashboard();
+      } else {
+        setError('Unable to delete assignment. Please try again.');
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -513,13 +565,22 @@ function Dashboard() {
                         <div className="text-end ms-3">
                           <div className="mb-2">{getStatusBadge(assignment.status)}</div>
                           <small className="text-muted d-block mb-2">📅 {formatDate(assignment.due_date)}</small>
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            onClick={() => handleOpenEditModal(assignment)}
-                          >
-                            ✏️ Edit
-                          </Button>
+                          <div className="d-flex gap-2 justify-content-end">
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={() => handleOpenEditModal(assignment)}
+                            >
+                              ✏️ Edit
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleOpenDeleteModal(assignment)}
+                            >
+                              🗑️ Delete
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -553,13 +614,22 @@ function Dashboard() {
                         <div className="text-end ms-3">
                           <div className="mb-2">{getStatusBadge(assignment.status)}</div>
                           <small className="text-danger fw-bold d-block mb-2">⏰ {formatDate(assignment.due_date)}</small>
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            onClick={() => handleOpenEditModal(assignment)}
-                          >
-                            ✏️ Edit
-                          </Button>
+                          <div className="d-flex gap-2 justify-content-end">
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleOpenEditModal(assignment)}
+                            >
+                              ✏️ Edit
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleOpenDeleteModal(assignment)}
+                            >
+                              🗑️ Delete
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -982,6 +1052,74 @@ function Dashboard() {
             </div>
           </Form>
         </Modal.Body>
+      </Modal>
+
+      {/* Delete Assignment Confirmation Modal */}
+      <Modal 
+        show={showDeleteModal} 
+        onHide={handleCloseDeleteModal}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <span className="gradient-text">🗑️ Delete Assignment</span>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Alert variant="warning">
+            <Alert.Heading>⚠️ Are you sure?</Alert.Heading>
+            <p className="mb-0">
+              This action cannot be undone. The assignment and all associated reminders will be permanently deleted.
+            </p>
+          </Alert>
+
+          {deletingAssignment && (
+            <div className="mb-3">
+              <p className="mb-2"><strong>Assignment Details:</strong></p>
+              <div className="p-3 bg-light rounded">
+                <p className="mb-1"><strong>Title:</strong> {deletingAssignment.title}</p>
+                <p className="mb-1"><strong>Module:</strong> {deletingAssignment.module_name}</p>
+                <p className="mb-0"><strong>Due Date:</strong> {formatDate(deletingAssignment.due_date)}</p>
+              </div>
+            </div>
+          )}
+
+          <Alert variant="info" className="mb-0">
+            <small>
+              💡 <strong>Note:</strong> All reminders associated with this assignment will also be deleted automatically.
+            </small>
+          </Alert>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button 
+            variant="outline-secondary" 
+            onClick={handleCloseDeleteModal}
+            disabled={deleting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="danger" 
+            onClick={handleDeleteConfirm}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="me-2"
+                />
+                Deleting...
+              </>
+            ) : (
+              '🗑️ Yes, Delete Assignment'
+            )}
+          </Button>
+        </Modal.Footer>
       </Modal>
     </>
   );

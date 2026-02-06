@@ -41,6 +41,11 @@ function Assignments() {
   });
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Delete confirmation state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingAssignment, setDeletingAssignment] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -281,6 +286,55 @@ function Assignments() {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleOpenDeleteModal = (assignment) => {
+    setDeletingAssignment(assignment);
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeletingAssignment(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingAssignment) return;
+
+    try {
+      setDeleting(true);
+
+      await assignmentsApi.delete(deletingAssignment.id);
+
+      setSuccessMessage(`✅ "${deletingAssignment.title}" deleted successfully. Associated reminders were also removed.`);
+      
+      // Reload data
+      await loadData();
+
+      // Close modal and clear success message after delay
+      handleCloseDeleteModal();
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 4000);
+
+    } catch (err) {
+      console.error('Error deleting assignment:', err);
+      if (err.response?.status === 401) {
+        setError('Session expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setError('Assignment not found. It may have already been deleted.');
+        handleCloseDeleteModal();
+        await loadData();
+      } else {
+        setError('Unable to delete assignment. Please try again.');
+      }
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -613,14 +667,22 @@ function Assignments() {
                               ✓ Completed {new Date(assignment.completed_at).toLocaleDateString()}
                             </small>
                           )}
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            onClick={() => handleOpenEditModal(assignment)}
-                            className="mt-2"
-                          >
-                            ✏️ Edit
-                          </Button>
+                          <div className="d-flex gap-2 justify-content-end">
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={() => handleOpenEditModal(assignment)}
+                            >
+                              ✏️ Edit
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleOpenDeleteModal(assignment)}
+                            >
+                              🗑️ Delete
+                            </Button>
+                          </div>
                         </Col>
                       </Row>
                     </Card.Body>
@@ -886,6 +948,85 @@ function Assignments() {
             </div>
           </Form>
         </Modal.Body>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal show={showDeleteModal} onHide={handleCloseDeleteModal} centered>
+        <Modal.Header closeButton className="border-0">
+          <Modal.Title>
+            <span className="text-danger">🗑️ Delete Assignment</span>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4">
+          <Alert variant="warning" className="mb-3">
+            <div className="d-flex align-items-start gap-2">
+              <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+              <div>
+                <strong>Are you sure you want to delete this assignment?</strong>
+                <p className="mb-0 mt-2">This action cannot be undone.</p>
+              </div>
+            </div>
+          </Alert>
+
+          {deletingAssignment && (
+            <div className="mb-3">
+              <h6 className="mb-2">Assignment Details:</h6>
+              <div className="p-3 bg-light rounded">
+                <div className="mb-2">
+                  <strong>Title:</strong> {deletingAssignment.title}
+                </div>
+                {deletingAssignment.module_name && (
+                  <div className="mb-2">
+                    <strong>Module:</strong> {deletingAssignment.module_icon} {deletingAssignment.module_name}
+                  </div>
+                )}
+                <div>
+                  <strong>Due Date:</strong> {new Date(deletingAssignment.due_date).toLocaleDateString('en-US', { 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Alert variant="info" className="mb-0 border-0" style={{backgroundColor: '#e0f2fe'}}>
+            <small>
+              💡 <strong>Note:</strong> All associated email reminders will also be deleted.
+            </small>
+          </Alert>
+        </Modal.Body>
+        <Modal.Footer className="border-0">
+          <Button 
+            variant="outline-secondary" 
+            onClick={handleCloseDeleteModal}
+            disabled={deleting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="danger"
+            onClick={handleDeleteConfirm}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="me-2"
+                />
+                Deleting...
+              </>
+            ) : (
+              '🗑️ Yes, Delete Assignment'
+            )}
+          </Button>
+        </Modal.Footer>
       </Modal>
     </>
   );
