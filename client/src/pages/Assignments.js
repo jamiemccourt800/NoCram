@@ -23,6 +23,7 @@ function Assignments() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [showCompleted, setShowCompleted] = useState(true); // Show completed by default
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -52,7 +53,7 @@ function Assignments() {
 
   useEffect(() => {
     applyFilters();
-  }, [assignments, searchQuery, filterModule, filterStatus, filterDateFrom, filterDateTo]);
+  }, [assignments, searchQuery, filterModule, filterStatus, filterDateFrom, filterDateTo, showCompleted]);
 
   const loadData = async () => {
     try {
@@ -130,6 +131,11 @@ function Assignments() {
       filtered = filtered.filter(assignment => 
         new Date(assignment.due_date) <= toDate
       );
+    }
+
+    // Hide completed assignments if showCompleted is false
+    if (!showCompleted) {
+      filtered = filtered.filter(assignment => assignment.status !== 'done');
     }
 
     setFilteredAssignments(filtered);
@@ -342,6 +348,62 @@ function Assignments() {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleToggleComplete = async (assignment, e) => {
+    // Prevent event bubbling
+    if (e) e.stopPropagation();
+
+    const newStatus = assignment.status === 'done' ? 'not_started' : 'done';
+    
+    try {
+      await assignmentsApi.updateStatus(assignment.id, newStatus);
+      
+      // Show success message
+      if (newStatus === 'done') {
+        setSuccessMessage(`✅ "${assignment.title}" marked as complete!`);
+      } else {
+        setSuccessMessage(`↩️ "${assignment.title}" marked as incomplete.`);
+      }
+      
+      // Reload data to update the list
+      await loadData();
+      
+      // Clear success message after delay
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
+
+    } catch (err) {
+      console.error('Error updating assignment status:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
+      if (err.response?.status === 401) {
+        setError('Session expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setError('Assignment not found.');
+        await loadData();
+        setTimeout(() => {
+          setError('');
+        }, 3000);
+      } else if (err.response?.status === 400) {
+        setError(err.response?.data?.error || 'Invalid status value.');
+        setTimeout(() => {
+          setError('');
+        }, 3000);
+      } else {
+        const errorMsg = err.response?.data?.error || err.message || 'Unable to update assignment status. Please try again.';
+        setError(errorMsg);
+        setTimeout(() => {
+          setError('');
+        }, 3000);
+      }
+    }
   };
 
   const isOverdue = (dueDate, status) => {
@@ -558,6 +620,20 @@ function Assignments() {
                 )}
               </Col>
             </Row>
+
+            {/* Show Completed Toggle */}
+            <Row className="mt-3">
+              <Col>
+                <Form.Check
+                  type="checkbox"
+                  id="show-completed"
+                  label="Show completed assignments"
+                  checked={showCompleted}
+                  onChange={(e) => setShowCompleted(e.target.checked)}
+                  className="text-muted"
+                />
+              </Col>
+            </Row>
           </Card.Body>
         </Card>
 
@@ -596,36 +672,50 @@ function Assignments() {
               return (
                 <Col key={assignment.id} xs={12}>
                   <Card 
-                    className={`assignment-card ${overdue ? 'border-danger' : ''}`}
+                    className={`assignment-card ${overdue ? 'border-danger' : ''} ${assignment.status === 'done' ? 'completed' : ''}`}
                     style={{
                       animation: `slideIn 0.3s ease-out ${index * 0.05}s both`,
-                      borderLeft: overdue ? '4px solid #ef4444' : assignment.module_color ? `4px solid ${assignment.module_color}` : '4px solid transparent'
+                      borderLeft: overdue ? '4px solid #ef4444' : assignment.module_color ? `4px solid ${assignment.module_color}` : '4px solid transparent',
+                      opacity: assignment.status === 'done' ? 0.7 : 1
                     }}
                   >
                     <Card.Body>
                       <Row className="align-items-start">
-                        {/* Left: Title and Module */}
+                        {/* Left: Checkbox, Title and Module */}
                         <Col md={6}>
-                          <div className="d-flex align-items-start gap-2 mb-2">
-                            {assignment.module_color && !overdue && (
-                              <span 
-                                className="module-dot mt-1"
-                                style={{ backgroundColor: assignment.module_color }}
+                          <div className="d-flex align-items-start gap-3 mb-2">
+                            <div className="mt-1">
+                              <Form.Check
+                                type="checkbox"
+                                checked={assignment.status === 'done'}
+                                onChange={(e) => handleToggleComplete(assignment, e)}
+                                className="completion-checkbox"
+                                title={assignment.status === 'done' ? 'Mark as incomplete' : 'Mark as complete'}
                               />
-                            )}
-                            <div className="flex-grow-1">
-                              <h5 className="mb-1">{assignment.title}</h5>
-                              {assignment.module_name && (
-                                <div className="text-muted small mb-2">
-                                  📚 {assignment.module_icon} {assignment.module_name}
-                                  {assignment.module_code && ` (${assignment.module_code})`}
-                                </div>
+                            </div>
+                            <div className="d-flex align-items-start gap-2 flex-grow-1">
+                              {assignment.module_color && !overdue && (
+                                <span 
+                                  className="module-dot mt-1"
+                                  style={{ backgroundColor: assignment.module_color }}
+                                />
                               )}
+                              <div className="flex-grow-1">
+                                <h5 className={`mb-1 ${assignment.status === 'done' ? 'text-decoration-line-through text-muted' : ''}`}>
+                                  {assignment.status === 'done' && '✓ '}{assignment.title}
+                                </h5>
+                                {assignment.module_name && (
+                                  <div className="text-muted small mb-2">
+                                    📚 {assignment.module_icon} {assignment.module_name}
+                                    {assignment.module_code && ` (${assignment.module_code})`}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                           
                           {assignment.description && (
-                            <p className="text-muted small mb-2">
+                            <p className={`text-muted small mb-2 ${assignment.status === 'done' ? 'opacity-50' : ''}`}>
                               {assignment.description.substring(0, 150)}
                               {assignment.description.length > 150 ? '...' : ''}
                             </p>

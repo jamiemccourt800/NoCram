@@ -154,8 +154,8 @@ router.put('/:id', async (req, res) => {
            due_date = COALESCE($4, due_date),
            weighting_percent = COALESCE($5, weighting_percent),
            estimated_hours = COALESCE($6, estimated_hours),
-           status = COALESCE($7, status),
-           completed_at = CASE WHEN $7 = 'done' THEN NOW() ELSE completed_at END
+           status = COALESCE($7::varchar, status),
+           completed_at = CASE WHEN $7::varchar = 'done' THEN NOW() WHEN $7 IS NOT NULL AND $7::varchar != 'done' THEN NULL ELSE completed_at END
        WHERE id = $8 AND user_id = $9
        RETURNING *`,
       [module_id, title, description, due_date, weighting_percent, estimated_hours, status, req.params.id, req.user.id]
@@ -190,24 +190,39 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id/status', async (req, res) => {
   const { status } = req.body;
 
+  console.log('PATCH /api/assignments/:id/status called');
+  console.log('Assignment ID:', req.params.id);
+  console.log('User ID:', req.user.id);
+  console.log('Status:', status);
+
   try {
+    if (!status) {
+      console.log('ERROR: No status provided');
+      return res.status(400).json({ error: 'Status is required' });
+    }
+
     if (!['not_started', 'in_progress', 'done'].includes(status)) {
+      console.log('ERROR: Invalid status value:', status);
       return res.status(400).json({ error: 'Invalid status' });
     }
 
     const result = await pool.query(
       `UPDATE assignments 
-       SET status = $1,
-           completed_at = CASE WHEN $1 = 'done' THEN NOW() ELSE NULL END
+       SET status = $1::varchar,
+           completed_at = CASE WHEN $1::varchar = 'done' THEN NOW() ELSE NULL END
        WHERE id = $2 AND user_id = $3
        RETURNING *`,
       [status, req.params.id, req.user.id]
     );
 
+    console.log('Query result rows:', result.rows.length);
+
     if (result.rows.length === 0) {
+      console.log('ERROR: Assignment not found');
       return res.status(404).json({ error: 'Assignment not found' });
     }
 
+    console.log('SUCCESS: Status updated to', status);
     res.json({ assignment: result.rows[0] });
   } catch (error) {
     console.error('Update status error:', error);

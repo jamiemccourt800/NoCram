@@ -150,6 +150,32 @@ body {
   transform: translateX(4px);
 }
 
+/* Completed assignments styling */
+.assignment-list-item.completed {
+  opacity: 0.7;
+  background: #f8faf9;
+}
+
+.assignment-list-item.completed:hover {
+  opacity: 0.85;
+  background: #f0f4f2;
+}
+
+/* Completion checkbox styling */
+.completion-checkbox {
+  cursor: pointer;
+  transform: scale(1.3);
+}
+
+.completion-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--success-color);
+}
+
+.completion-checkbox:hover {
+  transform: scale(1.4);
+}
+
 .assignment-title {
   font-weight: 600;
   color: var(--text-dark);

@@ -410,6 +410,62 @@ function Dashboard() {
     navigate('/login');
   };
 
+  const handleToggleComplete = async (assignment, e) => {
+    // Prevent event bubbling
+    if (e) e.stopPropagation();
+
+    const newStatus = assignment.status === 'done' ? 'not_started' : 'done';
+    
+    try {
+      await assignments.updateStatus(assignment.id, newStatus);
+      
+      // Show success message
+      if (newStatus === 'done') {
+        setSuccessMessage(`✅ "${assignment.title}" marked as complete!`);
+      } else {
+        setSuccessMessage(`↩️ "${assignment.title}" marked as incomplete.`);
+      }
+      
+      // Reload dashboard to update stats and lists
+      await loadDashboard();
+      
+      // Clear success message after delay
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
+
+    } catch (err) {
+      console.error('Error updating assignment status:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
+      if (err.response?.status === 401) {
+        setError('Session expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setError('Assignment not found.');
+        await loadDashboard();
+        setTimeout(() => {
+          setError('');
+        }, 3000);
+      } else if (err.response?.status === 400) {
+        setError(err.response?.data?.error || 'Invalid status value.');
+        setTimeout(() => {
+          setError('');
+        }, 3000);
+      } else {
+        const errorMsg = err.response?.data?.error || err.message || 'Unable to update assignment status. Please try again.';
+        setError(errorMsg);
+        setTimeout(() => {
+          setError('');
+        }, 3000);
+      }
+    }
+  };
+
   const getStatusBadge = (status) => {
     const badgeClasses = {
       not_started: 'badge-gradient-primary',
@@ -438,6 +494,20 @@ function Dashboard() {
       day: 'numeric',
       year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined 
     });
+  };
+
+  const formatCompletionDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const today = new Date();
+    
+    // If completed today, show time
+    if (date.toDateString() === today.toDateString()) {
+      return `Completed today at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+    }
+    
+    // Otherwise show date
+    return `Completed on ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   };
 
   if (loading) {
@@ -554,12 +624,30 @@ function Dashboard() {
                   </div>
                 ) : (
                   data.upcoming.map((assignment) => (
-                    <div key={assignment.id} className="assignment-list-item">
+                    <div key={assignment.id} className={`assignment-list-item ${assignment.status === 'done' ? 'completed' : ''}`}>
                       <div className="d-flex justify-content-between align-items-start">
-                        <div className="flex-grow-1">
-                          <div className="assignment-title">{assignment.title}</div>
-                          <div className="assignment-meta">
-                            📚 {assignment.module_name} {assignment.module_code && `(${assignment.module_code})`}
+                        <div className="d-flex align-items-start gap-3 flex-grow-1">
+                          <div className="mt-1">
+                            <Form.Check
+                              type="checkbox"
+                              checked={assignment.status === 'done'}
+                              onChange={(e) => handleToggleComplete(assignment, e)}
+                              className="completion-checkbox"
+                              title={assignment.status === 'done' ? 'Mark as incomplete' : 'Mark as complete'}
+                            />
+                          </div>
+                          <div className="flex-grow-1">
+                            <div className={`assignment-title ${assignment.status === 'done' ? 'text-decoration-line-through text-muted' : ''}`}>
+                              {assignment.status === 'done' && '✓ '}{assignment.title}
+                            </div>
+                            <div className="assignment-meta">
+                              📚 {assignment.module_name} {assignment.module_code && `(${assignment.module_code})`}
+                            </div>
+                            {assignment.status === 'done' && assignment.completed_at && (
+                              <div className="text-success small mt-1">
+                                {formatCompletionDate(assignment.completed_at)}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="text-end ms-3">
@@ -603,12 +691,30 @@ function Dashboard() {
                   </div>
                 ) : (
                   data.overdue.map((assignment) => (
-                    <div key={assignment.id} className="assignment-list-item">
+                    <div key={assignment.id} className={`assignment-list-item ${assignment.status === 'done' ? 'completed' : ''}`}>
                       <div className="d-flex justify-content-between align-items-start">
-                        <div className="flex-grow-1">
-                          <div className="assignment-title">{assignment.title}</div>
-                          <div className="assignment-meta">
-                            📚 {assignment.module_name}
+                        <div className="d-flex align-items-start gap-3 flex-grow-1">
+                          <div className="mt-1">
+                            <Form.Check
+                              type="checkbox"
+                              checked={assignment.status === 'done'}
+                              onChange={(e) => handleToggleComplete(assignment, e)}
+                              className="completion-checkbox"
+                              title={assignment.status === 'done' ? 'Mark as incomplete' : 'Mark as complete'}
+                            />
+                          </div>
+                          <div className="flex-grow-1">
+                            <div className={`assignment-title ${assignment.status === 'done' ? 'text-decoration-line-through text-muted' : ''}`}>
+                              {assignment.status === 'done' && '✓ '}{assignment.title}
+                            </div>
+                            <div className="assignment-meta">
+                              📚 {assignment.module_name}
+                            </div>
+                            {assignment.status === 'done' && assignment.completed_at && (
+                              <div className="text-success small mt-1">
+                                {formatCompletionDate(assignment.completed_at)}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="text-end ms-3">
