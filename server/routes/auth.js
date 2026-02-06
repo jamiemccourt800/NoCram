@@ -162,21 +162,62 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
-// PUT /api/auth/notification-preferences - Update notification preferences
-router.put('/notification-preferences', authenticateToken, async (req, res) => {
-  const { email_enabled, days_before, reminder_time } = req.body;
-
+// GET /api/auth/notification-preferences - Get notification preferences
+router.get('/notification-preferences', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `UPDATE notification_preferences 
-       SET email_enabled = $1, days_before = $2, reminder_time = $3, updated_at = NOW()
-       WHERE user_id = $4
-       RETURNING email_enabled, days_before, reminder_time`,
-      [email_enabled, days_before, reminder_time, req.user.id]
+      `SELECT email_enabled, push_enabled, in_app_enabled, default_reminder_days, updated_at
+       FROM notification_preferences 
+       WHERE user_id = $1`,
+      [req.user.id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Preferences not found' });
+      // Return default preferences if none exist
+      return res.json({
+        email_enabled: true,
+        push_enabled: false,
+        in_app_enabled: true,
+        default_reminder_days: '7,2,1'
+      });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching preferences:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /api/auth/notification-preferences - Update notification preferences
+router.put('/notification-preferences', authenticateToken, async (req, res) => {
+  const { email_enabled, default_reminder_days } = req.body;
+
+  try {
+    // First check if preferences exist
+    const checkResult = await pool.query(
+      'SELECT user_id FROM notification_preferences WHERE user_id = $1',
+      [req.user.id]
+    );
+
+    let result;
+    if (checkResult.rows.length === 0) {
+      // Insert new preferences
+      result = await pool.query(
+        `INSERT INTO notification_preferences (user_id, email_enabled, default_reminder_days, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         RETURNING email_enabled, default_reminder_days`,
+        [req.user.id, email_enabled, default_reminder_days || '7,2,1']
+      );
+    } else {
+      // Update existing preferences
+      result = await pool.query(
+        `UPDATE notification_preferences 
+         SET email_enabled = $1, default_reminder_days = $2, updated_at = NOW()
+         WHERE user_id = $3
+         RETURNING email_enabled, default_reminder_days`,
+        [email_enabled, default_reminder_days || '7,2,1', req.user.id]
+      );
     }
 
     res.json({ 

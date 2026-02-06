@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import '../styles/custom.css';
 
 function Settings() {
   const navigate = useNavigate();
   const [preferences, setPreferences] = useState({
     email_enabled: true,
-    days_before: 2,
-    reminder_time: '09:00',
+    default_reminder_days: '7,2,1',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -20,8 +20,15 @@ function Settings() {
   const fetchPreferences = async () => {
     try {
       const response = await api.get('/auth/me');
-      if (response.data.notification_preferences) {
-        setPreferences(response.data.notification_preferences);
+      // Try to fetch notification preferences
+      try {
+        const prefsResponse = await api.get('/auth/notification-preferences');
+        if (prefsResponse.data) {
+          setPreferences(prefsResponse.data);
+        }
+      } catch (err) {
+        // If preferences don't exist yet, use defaults
+        console.log('Using default preferences');
       }
       setLoading(false);
     } catch (error) {
@@ -57,136 +64,106 @@ function Settings() {
 
   if (loading) {
     return (
-      <div className="container mt-5 text-center">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
+      <div className="loading-container">
+        <div className="spinner-custom"></div>
+        <p className="mt-4 text-muted">Loading settings...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mt-5">
-      <div className="row justify-content-center">
-        <div className="col-md-8">
-          <div className="card shadow">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2 className="mb-0">Notification Settings</h2>
-                <button 
-                  onClick={() => navigate('/dashboard')} 
-                  className="btn btn-outline-secondary"
-                >
-                  Back to Dashboard
-                </button>
-              </div>
-
-              {message.text && (
-                <div className={`alert alert-${message.type} alert-dismissible fade show`} role="alert">
-                  {message.text}
-                  <button 
-                    type="button" 
-                    className="btn-close" 
-                    onClick={() => setMessage({ type: '', text: '' })}
-                  ></button>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <div className="form-check form-switch">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id="email_enabled"
-                      name="email_enabled"
-                      checked={preferences.email_enabled}
-                      onChange={handleChange}
-                    />
-                    <label className="form-check-label" htmlFor="email_enabled">
-                      <strong>Enable Email Reminders</strong>
-                      <p className="text-muted mb-0 small">
-                        Receive email notifications for upcoming assignment deadlines
-                      </p>
-                    </label>
-                  </div>
-                </div>
-
-                {preferences.email_enabled && (
-                  <>
-                    <div className="mb-4">
-                      <label htmlFor="days_before" className="form-label">
-                        <strong>Remind me (days before deadline)</strong>
-                      </label>
-                      <select
-                        className="form-select"
-                        id="days_before"
-                        name="days_before"
-                        value={preferences.days_before}
-                        onChange={handleChange}
-                      >
-                        <option value="1">1 day before</option>
-                        <option value="2">2 days before</option>
-                        <option value="3">3 days before</option>
-                        <option value="5">5 days before</option>
-                        <option value="7">1 week before</option>
-                      </select>
-                      <div className="form-text">
-                        You'll receive reminders for assignments due within this timeframe
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <label htmlFor="reminder_time" className="form-label">
-                        <strong>Preferred reminder time</strong>
-                      </label>
-                      <input
-                        type="time"
-                        className="form-control"
-                        id="reminder_time"
-                        name="reminder_time"
-                        value={preferences.reminder_time}
-                        onChange={handleChange}
-                      />
-                      <div className="form-text">
-                        Daily reminders will be sent around this time
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                <div className="d-grid gap-2">
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary"
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Saving...
-                      </>
-                    ) : (
-                      'Save Preferences'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <div className="card shadow mt-4">
-            <div className="card-body">
-              <h5 className="card-title">How Reminders Work</h5>
-              <ul className="mb-0">
-                <li>Reminders are checked daily at 9:00 AM (server time)</li>
-                <li>You'll receive one email per assignment within your reminder window</li>
-                <li>Emails won't be sent more than once per day for the same assignment</li>
-                <li>Completed assignments won't trigger reminders</li>
-              </ul>
-            </div>
-          </div>
+    <div className="settings-container fade-in">
+      <div className="settings-card">
+        <div className="settings-header">
+          <h2 className="settings-title">⚙️ Notification Settings</h2>
+          <button 
+            onClick={() => navigate('/dashboard')} 
+            className="btn btn-outline-custom"
+          >
+            ← Back to Dashboard
+          </button>
         </div>
+
+        {message.text && (
+          <div className={`alert alert-custom alert-${message.type} mb-4`} role="alert">
+            {message.text}
+            <button 
+              type="button" 
+              className="btn-close" 
+              onClick={() => setMessage({ type: '', text: '' })}
+            ></button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <div className="form-check form-switch form-switch-custom">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="email_enabled"
+                name="email_enabled"
+                checked={preferences.email_enabled}
+                onChange={handleChange}
+              />
+              <label className="form-check-label" htmlFor="email_enabled">
+                <strong>📧 Enable Email Reminders</strong>
+                <p className="text-muted mb-0 small mt-1">
+                  Receive email notifications for upcoming assignment deadlines
+                </p>
+              </label>
+            </div>
+          </div>
+
+          {preferences.email_enabled && (
+            <>
+              <div className="mb-4">
+                <label htmlFor="default_reminder_days" className="form-label-custom">
+                  <strong>🗓️ Reminder Days</strong>
+                </label>
+                <input
+                  type="text"
+                  className="form-control form-control-custom"
+                  id="default_reminder_days"
+                  name="default_reminder_days"
+                  value={preferences.default_reminder_days}
+                  onChange={handleChange}
+                  placeholder="7,2,1"
+                />
+                <div className="form-text">
+                  Comma-separated list of days before deadline to send reminders (e.g., "7,2,1" for 7 days, 2 days, and 1 day before)
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="d-grid gap-2 mt-4">
+            <button 
+              type="submit" 
+              className="btn btn-gradient-primary"
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Saving...
+                </>
+              ) : (
+                '💾 Save Preferences'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="settings-card">
+        <h5 className="mb-3" style={{fontWeight: 600}}>💡 How Reminders Work</h5>
+        <ul className="mb-0" style={{lineHeight: '1.8'}}>
+          <li>Reminders are checked daily at 9:00 AM (server time)</li>
+          <li>You'll receive one email per assignment within your reminder window</li>
+          <li>Emails won't be sent more than once per day for the same assignment</li>
+          <li>Completed assignments won't trigger reminders</li>
+        </ul>
       </div>
     </div>
   );

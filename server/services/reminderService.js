@@ -14,23 +14,22 @@ const checkUpcomingDeadlines = async () => {
         a.title,
         a.description,
         a.due_date,
-        a.priority,
         a.status,
         m.name as module_name,
+        u.id as user_id,
         u.email,
         u.name as user_name,
         np.email_enabled,
-        np.days_before,
-        np.reminder_time
+        np.default_reminder_days
       FROM assignments a
       JOIN modules m ON a.module_id = m.id
       JOIN users u ON m.user_id = u.id
       JOIN notification_preferences np ON u.id = np.user_id
       WHERE 
-        a.status != 'completed'
+        a.status != 'done'
         AND np.email_enabled = true
         AND a.due_date > NOW()
-        AND a.due_date <= NOW() + INTERVAL '1 day' * np.days_before
+        AND a.due_date <= NOW() + INTERVAL '7 day'
         AND NOT EXISTS (
           SELECT 1 FROM reminders r 
           WHERE r.assignment_id = a.id 
@@ -49,6 +48,17 @@ const checkUpcomingDeadlines = async () => {
         (new Date(assignment.due_date) - new Date()) / (1000 * 60 * 60 * 24)
       );
 
+      // Parse user's reminder day preferences (e.g., '7,2,1' -> [7, 2, 1])
+      const reminderDays = assignment.default_reminder_days
+        ? assignment.default_reminder_days.split(',').map(d => parseInt(d.trim()))
+        : [7, 2, 1]; // Default fallback
+
+      // Only send reminder if days until due matches one of the reminder days
+      if (!reminderDays.includes(daysUntilDue)) {
+        console.log(`⏭️ Skipping ${assignment.title} - ${daysUntilDue} days until due (reminder days: ${reminderDays.join(',')})`);
+        continue;
+      }
+
       const subject = daysUntilDue === 0 
         ? `⚠️ Due Today: ${assignment.title}`
         : daysUntilDue === 1
@@ -65,9 +75,9 @@ const checkUpcomingDeadlines = async () => {
       if (emailResult.success) {
         // Log the reminder in the database
         await db.query(
-          `INSERT INTO reminders (assignment_id, reminder_type, sent_at)
-           VALUES ($1, $2, NOW())`,
-          [assignment.id, 'email']
+          `INSERT INTO reminders (assignment_id, user_id, remind_at, type, sent, sent_at)
+           VALUES ($1, $2, NOW(), $3, true, NOW())`,
+          [assignment.id, assignment.user_id, 'email']
         );
 
         console.log(`✅ Reminder sent to ${assignment.email} for: ${assignment.title}`);

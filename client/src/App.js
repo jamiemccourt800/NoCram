@@ -8,6 +8,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import Assignments from './pages/Assignments';
 import Settings from './pages/Settings';
 
 // Protected Route component
@@ -52,6 +53,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/assignments"
+            element={
+              <ProtectedRoute>
+                <Assignments />
               </ProtectedRoute>
             }
           />

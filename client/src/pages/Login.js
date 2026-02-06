@@ -1,8 +1,9 @@
 // client/src/pages/Login.js
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Container, Form, Button, Alert, Card } from 'react-bootstrap';
+import { Form, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
+import '../styles/custom.css';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -29,49 +30,60 @@ function Login() {
   };
 
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-      <div style={{ maxWidth: '400px', width: '100%' }}>
-        <Card>
-          <Card.Body>
-            <h2 className="text-center mb-4">NoCram</h2>
-            <p className="text-center text-muted mb-4">Stop cramming. Start planning.</p>
-            
-            {error && <Alert variant="danger">{error}</Alert>}
-            
-            <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3">
-                <Form.Label>Email</Form.Label>
-                <Form.Control
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </Form.Group>
-
-              <Button type="submit" variant="primary" className="w-100" disabled={loading}>
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
-            </Form>
-          </Card.Body>
-        </Card>
+    <div className="auth-container">
+      <div className="auth-card fade-in">
+        <div className="text-center">
+          <h1 className="auth-logo">NoCram</h1>
+          <p className="auth-subtitle">Stop cramming. Start planning.</p>
+        </div>
         
-        <div className="text-center mt-3">
-          Don't have an account? <Link to="/signup">Sign up</Link>
+        {error && <Alert className="alert-custom alert-danger">{error}</Alert>}
+        
+        <Form onSubmit={handleSubmit}>
+          <Form.Group className="mb-3">
+            <Form.Label className="form-label-custom">Email</Form.Label>
+            <Form.Control
+              className="form-control-custom"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoFocus
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-4">
+            <Form.Label className="form-label-custom">Password</Form.Label>
+            <Form.Control
+              className="form-control-custom"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </Form.Group>
+
+          <Button type="submit" className="btn-gradient-primary w-100 mb-3" disabled={loading}>
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Logging in...
+              </>
+            ) : (
+              '🔑 Login'
+            )}
+          </Button>
+        </Form>
+        
+        <div className="text-center mt-4">
+          <p className="text-muted mb-0">
+            Don't have an account? <Link to="/signup" style={{color: '#667eea', fontWeight: 600}}>Sign up</Link>
+          </p>
         </div>
       </div>
-    </Container>
+    </div>
   );
 }
 

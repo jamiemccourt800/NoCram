@@ -66,7 +66,7 @@ const sendReminderEmail = async (to, subject, assignment) => {
                   minute: '2-digit'
                 })}</p>
                 ${assignment.description ? `<p><strong>Description:</strong> ${assignment.description}</p>` : ''}
-                <p><strong>Priority:</strong> ${assignment.priority}</p>
+                <p><strong>Status:</strong> ${assignment.status}</p>
               </div>
               <p>Don't forget to complete this assignment on time!</p>
               <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/dashboard" class="button">View Dashboard</a>

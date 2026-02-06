@@ -1,8 +1,9 @@
 // client/src/pages/Signup.js
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Container, Form, Button, Alert, Card } from 'react-bootstrap';
+import { Form, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
+import '../styles/custom.css';
 
 function Signup() {
   const [formData, setFormData] = useState({
@@ -53,72 +54,89 @@ function Signup() {
   };
 
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-      <div style={{ maxWidth: '400px', width: '100%' }}>
-        <Card>
-          <Card.Body>
-            <h2 className="text-center mb-4">Create Account</h2>
-            
-            {error && <Alert variant="danger">{error}</Alert>}
-            
-            <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3">
-                <Form.Label>Name</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  autoFocus
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Email</Form.Label>
-                <Form.Control
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Confirm Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                />
-              </Form.Group>
-
-              <Button type="submit" variant="primary" className="w-100" disabled={loading}>
-                {loading ? 'Creating account...' : 'Sign Up'}
-              </Button>
-            </Form>
-          </Card.Body>
-        </Card>
+    <div className="auth-container">
+      <div className="auth-card fade-in">
+        <div className="text-center">
+          <h1 className="auth-logo">Create Account</h1>
+          <p className="auth-subtitle">Join NoCram and stay organized</p>
+        </div>
         
-        <div className="text-center mt-3">
-          Already have an account? <Link to="/login">Login</Link>
+        {error && <Alert className="alert-custom alert-danger">{error}</Alert>}
+        
+        <Form onSubmit={handleSubmit}>
+          <Form.Group className="mb-3">
+            <Form.Label className="form-label-custom">Name</Form.Label>
+            <Form.Control
+              className="form-control-custom"
+              type="text"
+              name="name"
+              placeholder="Your full name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              autoFocus
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="form-label-custom">Email</Form.Label>
+            <Form.Control
+              className="form-control-custom"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="form-label-custom">Password</Form.Label>
+            <Form.Control
+              className="form-control-custom"
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+            <small className="text-muted">At least 6 characters</small>
+          </Form.Group>
+
+          <Form.Group className="mb-4">
+            <Form.Label className="form-label-custom">Confirm Password</Form.Label>
+            <Form.Control
+              className="form-control-custom"
+              type="password"
+              name="confirmPassword"
+              placeholder="••••••••"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+            />
+          </Form.Group>
+
+          <Button type="submit" className="btn-gradient-primary w-100 mb-3" disabled={loading}>
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Creating account...
+              </>
+            ) : (
+              '🚀 Sign Up'
+            )}
+          </Button>
+        </Form>
+        
+        <div className="text-center mt-4">
+          <p className="text-muted mb-0">
+            Already have an account? <Link to="/login" style={{color: '#667eea', fontWeight: 600}}>Login</Link>
+          </p>
         </div>
       </div>
-    </Container>
+    </div>
   );
 }
 
