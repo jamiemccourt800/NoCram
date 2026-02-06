@@ -18,7 +18,10 @@ function Modules() {
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingModule, setEditingModule] = useState(null);
+  const [deletingModule, setDeletingModule] = useState(null);
+  const [assignmentCount, setAssignmentCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   
@@ -338,6 +341,66 @@ function Modules() {
     }
   };
   
+  // Delete handlers
+  const handleOpenDeleteModal = async (module) => {
+    setDeletingModule(module);
+    setFormError('');
+    
+    try {
+      // Fetch assignment count for this module
+      const response = await modulesApi.getAssignmentCount(module.id);
+      setAssignmentCount(response.data.count);
+      setShowDeleteModal(true);
+    } catch (err) {
+      console.error('Error fetching assignment count:', err);
+      setFormError('Unable to check assignments. Please try again.');
+    }
+  };
+  
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeletingModule(null);
+    setAssignmentCount(0);
+    setFormError('');
+  };
+  
+  const handleDeleteModule = async (unlinkOnly) => {
+    if (!deletingModule) return;
+    
+    setFormError('');
+    
+    try {
+      setSubmitting(true);
+      
+      await modulesApi.delete(deletingModule.id, unlinkOnly);
+      
+      const action = unlinkOnly ? 'unlinked from its assignments' : 'deleted';
+      setSuccessMessage(`✅ Module "${deletingModule.name}" ${action} successfully!`);
+      handleCloseDeleteModal();
+      await loadModules();
+      
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 4000);
+      
+    } catch (err) {
+      console.error('Error deleting module:', err);
+      if (err.response?.status === 401) {
+        setFormError('Session expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setFormError('Module not found.');
+      } else {
+        setFormError('Unable to delete module. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -475,14 +538,22 @@ function Modules() {
                       </p>
                     )}
                     
-                    <div className="mt-3">
+                    <div className="mt-3 d-flex gap-2">
                       <Button
                         variant="outline-primary"
                         size="sm"
-                        className="w-100"
+                        className="flex-grow-1"
                         onClick={() => handleOpenEditModal(module)}
                       >
-                        ✏️ Edit Module
+                        ✏️ Edit
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        className="flex-grow-1"
+                        onClick={() => handleOpenDeleteModal(module)}
+                      >
+                        🗑️ Delete
                       </Button>
                     </div>
                   </Card.Body>
@@ -799,6 +870,119 @@ function Modules() {
               </Button>
             </div>
           </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* Delete Module Confirmation Modal */}
+      <Modal show={showDeleteModal} onHide={handleCloseDeleteModal} centered>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title>🗑️ Delete Module</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {formError && <Alert variant="danger">{formError}</Alert>}
+          
+          {deletingModule && (
+            <>
+              <p className="mb-3">
+                Are you sure you want to delete <strong>{deletingModule.name}</strong>?
+              </p>
+              
+              {assignmentCount > 0 ? (
+                <>
+                  <Alert variant="warning" className="mb-3">
+                    <strong>⚠️ Warning:</strong> This module has <strong>{assignmentCount}</strong> {assignmentCount === 1 ? 'assignment' : 'assignments'}.
+                  </Alert>
+                  
+                  <p className="mb-3">What would you like to do with the assignments?</p>
+                  
+                  <div className="d-grid gap-2">
+                    <Button
+                      variant="danger"
+                      onClick={() => handleDeleteModule(false)}
+                      disabled={submitting}
+                    >
+                      {submitting ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                            className="me-2"
+                          />
+                          Deleting...
+                        </>
+                      ) : (
+                        '🗑️ Delete Module and All Assignments'
+                      )}
+                    </Button>
+                    
+                    <Button
+                      variant="warning"
+                      onClick={() => handleDeleteModule(true)}
+                      disabled={submitting}
+                    >
+                      {submitting ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                            className="me-2"
+                          />
+                          Unlinking...
+                        </>
+                      ) : (
+                        '🔗 Delete Module Only (Unlink Assignments)'
+                      )}
+                    </Button>
+                    
+                    <Button
+                      variant="outline-secondary"
+                      onClick={handleCloseDeleteModal}
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="d-flex justify-content-end gap-2 mt-3">
+                  <Button
+                    variant="outline-secondary"
+                    onClick={handleCloseDeleteModal}
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => handleDeleteModule(false)}
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      <>
+                        <Spinner
+                          as="span"
+                          animation="border"
+                          size="sm"
+                          role="status"
+                          aria-hidden="true"
+                          className="me-2"
+                        />
+                        Deleting...
+                      </>
+                    ) : (
+                      '🗑️ Delete Module'
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </Modal.Body>
       </Modal>
     </>

@@ -48,9 +48,10 @@ export const auth = {
 export const modules = {
   getAll: () => api.get('/modules'),
   getById: (id) => api.get(`/modules/${id}`),
+  getAssignmentCount: (id) => api.get(`/modules/${id}/assignments/count`),
   create: (data) => api.post('/modules', data),
   update: (id, data) => api.put(`/modules/${id}`, data),
-  delete: (id) => api.delete(`/modules/${id}`),
+  delete: (id, unlinkOnly = false) => api.delete(`/modules/${id}${unlinkOnly ? '?unlinkOnly=true' : ''}`),
 };
 
 // Assignment endpoints

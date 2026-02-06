@@ -68,6 +68,21 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// GET /api/modules/:id/assignments/count - Get assignment count for module
+router.get('/:id/assignments/count', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT COUNT(*) as count FROM assignments WHERE module_id = $1 AND user_id = $2',
+      [req.params.id, req.user.id]
+    );
+
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch (error) {
+    console.error('Get assignment count error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // PUT /api/modules/:id - Update module
 router.put('/:id', async (req, res) => {
   const { name, code, color, icon, credits } = req.body;
@@ -97,8 +112,20 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/modules/:id - Delete module
+// Query param: unlinkOnly=true to unlink assignments instead of deleting them
 router.delete('/:id', async (req, res) => {
+  const unlinkOnly = req.query.unlinkOnly === 'true';
+  
   try {
+    // If unlinkOnly, first set module_id to NULL for all assignments
+    if (unlinkOnly) {
+      await pool.query(
+        'UPDATE assignments SET module_id = NULL WHERE module_id = $1 AND user_id = $2',
+        [req.params.id, req.user.id]
+      );
+    }
+    
+    // Delete the module (CASCADE will delete assignments if unlinkOnly is false)
     const result = await pool.query(
       'DELETE FROM modules WHERE id = $1 AND user_id = $2 RETURNING id',
       [req.params.id, req.user.id]
@@ -108,7 +135,11 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Module not found' });
     }
 
-    res.json({ message: 'Module deleted successfully' });
+    res.json({ 
+      message: unlinkOnly 
+        ? 'Module deleted successfully. Assignments have been unlinked.' 
+        : 'Module deleted successfully.'
+    });
   } catch (error) {
     console.error('Delete module error:', error);
     res.status(500).json({ error: 'Server error' });
