@@ -228,7 +228,7 @@ function Modules() {
       code: module.code || '',
       color: module.color || '#3B82F6',
       icon: module.icon || '',
-      credits: module.credits || ''
+      credits: module.credits ?? ''
     });
     setValidationErrors({});
     setFormError('');
@@ -746,7 +746,6 @@ function Modules() {
         </Modal.Header>
         <Modal.Body>
           {formError && <Alert variant="danger">{formError}</Alert>}
-          {successMessage && <Alert variant="success">{successMessage}</Alert>}
           
           <Form onSubmit={handleEditSubmit}>
             <Form.Group className="mb-3">
@@ -759,8 +758,12 @@ function Modules() {
                 value={editFormData.name}
                 onChange={handleEditInputChange}
                 placeholder="Enter module name"
+                isInvalid={!!validationErrors.name}
                 required
               />
+              <Form.Control.Feedback type="invalid">
+                {validationErrors.name}
+              </Form.Control.Feedback>
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -787,7 +790,11 @@ function Modules() {
                 placeholder="Enter credit hours"
                 min="0"
                 max="20"
+                isInvalid={!!validationErrors.credits}
               />
+              <Form.Control.Feedback type="invalid">
+                {validationErrors.credits}
+              </Form.Control.Feedback>
               <Form.Text className="text-muted">
                 Credit hours for this module (0-20)
               </Form.Text>
@@ -817,11 +824,13 @@ function Modules() {
               </Form.Label>
               <div className="d-flex flex-wrap gap-2 mb-3">
                 {presetColors.map(color => (
-                  <div
+                  <button
+                    type="button"
                     key={color.value}
                     className={`color-swatch ${editFormData.color === color.value ? 'selected' : ''}`}
                     style={{ backgroundColor: color.value }}
                     onClick={() => handleEditColorSelect(color.value)}
+                    aria-pressed={editFormData.color === color.value}
                     title={color.name}
                   />
                 ))}
@@ -833,7 +842,11 @@ function Modules() {
                 onChange={handleEditInputChange}
                 placeholder="#3B82F6"
                 pattern="^#[0-9A-Fa-f]{6}$"
+                isInvalid={!!validationErrors.color}
               />
+              <Form.Control.Feedback type="invalid">
+                {validationErrors.color}
+              </Form.Control.Feedback>
               <Form.Text className="text-muted">
                 Select a preset color or enter a custom hex color code (e.g., #3B82F6)
               </Form.Text>
