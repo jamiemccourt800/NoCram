@@ -608,6 +608,13 @@ function Dashboard() {
             >
               📝 Assignments
             </Button>
+            <Button 
+              variant="link"
+              className="text-decoration-none"
+              onClick={() => navigate('/modules')}
+            >
+              📚 Modules
+            </Button>
             <span className="text-muted d-none d-md-inline">Welcome, <strong>{user?.name || user?.email}</strong></span>
             <Button 
               className="btn-outline-custom"

@@ -544,6 +544,13 @@ function Assignments() {
             >
               📝 Assignments
             </Button>
+            <Button 
+              variant="link"
+              className="text-decoration-none"
+              onClick={() => navigate('/modules')}
+            >
+              📚 Modules
+            </Button>
             <span className="text-muted d-none d-md-inline">{user?.name || user?.email}</span>
             <Button 
               className="btn-outline-custom"

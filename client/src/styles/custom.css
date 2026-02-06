@@ -638,3 +638,41 @@ body {
 .btn-link.text-primary {
   color: var(--primary-color) !important;
 }
+/* Module Cards */
+.module-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.module-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.module-color-indicator {
+  box-shadow: var(--shadow-sm);
+}
+
+/* Color Swatches */
+.color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow);
+}
+
+.color-swatch.selected {
+  border-color: var(--text-dark);
+  box-shadow: 0 0 0 2px var(--bg-white), 0 0 0 4px var(--text-dark);
+  transform: scale(1.05);
+}
