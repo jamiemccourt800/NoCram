@@ -1,6 +1,6 @@
 // client/src/pages/Dashboard.js
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, ListGroup, Badge, Spinner, Alert, Button, Modal, Form } from 'react-bootstrap';
+import { Container, Row, Col, Card, ListGroup, Badge, Spinner, Alert, Button, Modal, Form, Dropdown, ButtonGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { dashboard, assignments, modules as modulesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -410,6 +410,64 @@ function Dashboard() {
     navigate('/login');
   };
 
+  const handleStatusChange = async (assignment, newStatus, e) => {
+    // Prevent event bubbling
+    if (e) e.stopPropagation();
+    
+    // Don't update if status is the same
+    if (assignment.status === newStatus) return;
+    
+    try {
+      await assignments.updateStatus(assignment.id, newStatus);
+      
+      // Show success message
+      const statusLabels = {
+        not_started: 'Not Started',
+        in_progress: 'In Progress',
+        done: 'Done'
+      };
+      setSuccessMessage(`✅ "${assignment.title}" status updated to "${statusLabels[newStatus]}"!`);
+      
+      // Reload dashboard to update stats and lists
+      await loadDashboard();
+      
+      // Clear success message after delay
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
+
+    } catch (err) {
+      console.error('Error updating assignment status:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      
+      if (err.response?.status === 401) {
+        setError('Session expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setError('Assignment not found.');
+        await loadDashboard();
+        setTimeout(() => {
+          setError('');
+        }, 3000);
+      } else if (err.response?.status === 400) {
+        setError(err.response?.data?.error || 'Invalid status value.');
+        setTimeout(() => {
+          setError('');
+        }, 3000);
+      } else {
+        const errorMsg = err.response?.data?.error || err.message || 'Unable to update assignment status. Please try again.';
+        setError(errorMsg);
+        setTimeout(() => {
+          setError('');
+        }, 3000);
+      }
+    }
+  };
+
   const handleToggleComplete = async (assignment, e) => {
     // Prevent event bubbling
     if (e) e.stopPropagation();
@@ -651,7 +709,39 @@ function Dashboard() {
                           </div>
                         </div>
                         <div className="text-end ms-3">
-                          <div className="mb-2">{getStatusBadge(assignment.status)}</div>
+                          <Dropdown as={ButtonGroup} className="mb-2">
+                            <div className="d-flex align-items-center">
+                              {getStatusBadge(assignment.status)}
+                            </div>
+                            <Dropdown.Toggle 
+                              split 
+                              variant="link" 
+                              size="sm" 
+                              id={`status-dropdown-${assignment.id}`}
+                              className="text-decoration-none p-0 ms-1"
+                              style={{border: 'none', boxShadow: 'none'}}
+                            />
+                            <Dropdown.Menu>
+                              <Dropdown.Item 
+                                onClick={(e) => handleStatusChange(assignment, 'not_started', e)}
+                                active={assignment.status === 'not_started'}
+                              >
+                                📋 Not Started
+                              </Dropdown.Item>
+                              <Dropdown.Item 
+                                onClick={(e) => handleStatusChange(assignment, 'in_progress', e)}
+                                active={assignment.status === 'in_progress'}
+                              >
+                                ⚡ In Progress
+                              </Dropdown.Item>
+                              <Dropdown.Item 
+                                onClick={(e) => handleStatusChange(assignment, 'done', e)}
+                                active={assignment.status === 'done'}
+                              >
+                                ✓ Done
+                              </Dropdown.Item>
+                            </Dropdown.Menu>
+                          </Dropdown>
                           <small className="text-muted d-block mb-2">📅 {formatDate(assignment.due_date)}</small>
                           <div className="d-flex gap-2 justify-content-end">
                             <Button
@@ -718,7 +808,39 @@ function Dashboard() {
                           </div>
                         </div>
                         <div className="text-end ms-3">
-                          <div className="mb-2">{getStatusBadge(assignment.status)}</div>
+                          <Dropdown as={ButtonGroup} className="mb-2">
+                            <div className="d-flex align-items-center">
+                              {getStatusBadge(assignment.status)}
+                            </div>
+                            <Dropdown.Toggle 
+                              split 
+                              variant="link" 
+                              size="sm" 
+                              id={`status-dropdown-overdue-${assignment.id}`}
+                              className="text-decoration-none p-0 ms-1"
+                              style={{border: 'none', boxShadow: 'none'}}
+                            />
+                            <Dropdown.Menu>
+                              <Dropdown.Item 
+                                onClick={(e) => handleStatusChange(assignment, 'not_started', e)}
+                                active={assignment.status === 'not_started'}
+                              >
+                                📋 Not Started
+                              </Dropdown.Item>
+                              <Dropdown.Item 
+                                onClick={(e) => handleStatusChange(assignment, 'in_progress', e)}
+                                active={assignment.status === 'in_progress'}
+                              >
+                                ⚡ In Progress
+                              </Dropdown.Item>
+                              <Dropdown.Item 
+                                onClick={(e) => handleStatusChange(assignment, 'done', e)}
+                                active={assignment.status === 'done'}
+                              >
+                                ✓ Done
+                              </Dropdown.Item>
+                            </Dropdown.Menu>
+                          </Dropdown>
                           <small className="text-danger fw-bold d-block mb-2">⏰ {formatDate(assignment.due_date)}</small>
                           <div className="d-flex gap-2 justify-content-end">
                             <Button
