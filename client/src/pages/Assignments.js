@@ -301,6 +301,7 @@ function Assignments() {
 
   const handleDeleteConfirm = async () => {
     if (!deletingAssignment) return;
+    if (deleting) return;
 
     try {
       setDeleting(true);
@@ -951,8 +952,14 @@ function Assignments() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal show={showDeleteModal} onHide={handleCloseDeleteModal} centered>
-        <Modal.Header closeButton className="border-0">
+      <Modal 
+        show={showDeleteModal} 
+        onHide={() => { if (!deleting) handleCloseDeleteModal(); }}
+        backdrop={deleting ? "static" : true}
+        keyboard={!deleting}
+        centered
+      >
+        <Modal.Header closeButton={!deleting} className="border-0">
           <Modal.Title>
             <span className="text-danger">🗑️ Delete Assignment</span>
           </Modal.Title>

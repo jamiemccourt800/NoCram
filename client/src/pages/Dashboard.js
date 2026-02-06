@@ -1078,7 +1078,7 @@ function Dashboard() {
               <p className="mb-2"><strong>Assignment Details:</strong></p>
               <div className="p-3 bg-light rounded">
                 <p className="mb-1"><strong>Title:</strong> {deletingAssignment.title}</p>
-                <p className="mb-1"><strong>Module:</strong> {deletingAssignment.module_name}</p>
+                <p className="mb-1"><strong>Module:</strong> {deletingAssignment.module_name || 'No module (standalone assignment)'}</p>
                 <p className="mb-0"><strong>Due Date:</strong> {formatDate(deletingAssignment.due_date)}</p>
               </div>
             </div>
