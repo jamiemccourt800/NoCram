@@ -17,11 +17,21 @@ function Modules() {
   
   // Modal state
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingModule, setEditingModule] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   
   // Form state
   const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    color: '#3B82F6',
+    icon: '',
+    credits: ''
+  });
+  
+  const [editFormData, setEditFormData] = useState({
     name: '',
     code: '',
     color: '#3B82F6',
@@ -208,6 +218,126 @@ function Modules() {
     }
   };
   
+  const handleOpenEditModal = (module) => {
+    setEditingModule(module);
+    setEditFormData({
+      name: module.name || '',
+      code: module.code || '',
+      color: module.color || '#3B82F6',
+      icon: module.icon || '',
+      credits: module.credits || ''
+    });
+    setValidationErrors({});
+    setFormError('');
+    setShowEditModal(true);
+  };
+  
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingModule(null);
+    setEditFormData({
+      name: '',
+      code: '',
+      color: '#3B82F6',
+      icon: '',
+      credits: ''
+    });
+    setValidationErrors({});
+    setFormError('');
+  };
+  
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear validation error for this field
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+  
+  const handleEditColorSelect = (color) => {
+    setEditFormData(prev => ({
+      ...prev,
+      color
+    }));
+  };
+  
+  const validateEditForm = () => {
+    const errors = {};
+    
+    if (!editFormData.name.trim()) {
+      errors.name = 'Module name is required';
+    }
+    
+    if (editFormData.credits && (parseFloat(editFormData.credits) < 0 || parseFloat(editFormData.credits) > 20)) {
+      errors.credits = 'Credits must be between 0 and 20';
+    }
+    
+    // Validate hex color if custom
+    if (editFormData.color && !/^#[0-9A-F]{6}$/i.test(editFormData.color)) {
+      errors.color = 'Invalid color format (use #RRGGBB)';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    
+    if (!validateEditForm()) {
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      const moduleData = {
+        name: editFormData.name.trim(),
+        code: editFormData.code.trim() || null,
+        color: editFormData.color,
+        icon: editFormData.icon || null,
+        credits: editFormData.credits ? parseFloat(editFormData.credits) : null
+      };
+      
+      await modulesApi.update(editingModule.id, moduleData);
+      
+      setSuccessMessage(`✅ Module "${editFormData.name}" updated successfully! All associated assignments have been updated.`);
+      handleCloseEditModal();
+      await loadModules();
+      
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 4000);
+      
+    } catch (err) {
+      console.error('Error updating module:', err);
+      if (err.response?.status === 401) {
+        setFormError('Session expired. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else if (err.response?.status === 400) {
+        setFormError(err.response.data.error || 'Invalid module data');
+      } else if (err.response?.status === 404) {
+        setFormError('Module not found.');
+      } else {
+        setFormError('Unable to update module. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -344,6 +474,17 @@ function Modules() {
                         {module.credits} {module.credits === 1 ? 'credit' : 'credits'}
                       </p>
                     )}
+                    
+                    <div className="mt-3">
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        className="w-100"
+                        onClick={() => handleOpenEditModal(module)}
+                      >
+                        ✏️ Edit Module
+                      </Button>
+                    </div>
                   </Card.Body>
                 </Card>
               </Col>
@@ -520,6 +661,140 @@ function Modules() {
                   </>
                 ) : (
                   '✓ Create Module'
+                )}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* Edit Module Modal */}
+      <Modal show={showEditModal} onHide={handleCloseEditModal} size="lg" centered>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title>✏️ Edit Module</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {formError && <Alert variant="danger">{formError}</Alert>}
+          {successMessage && <Alert variant="success">{successMessage}</Alert>}
+          
+          <Form onSubmit={handleEditSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label>
+                Module Name <span className="text-danger">*</span>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                name="name"
+                value={editFormData.name}
+                onChange={handleEditInputChange}
+                placeholder="Enter module name"
+                required
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Module Code</Form.Label>
+              <Form.Control
+                type="text"
+                name="code"
+                value={editFormData.code}
+                onChange={handleEditInputChange}
+                placeholder="e.g., CS101"
+              />
+              <Form.Text className="text-muted">
+                Optional identifier for your module
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Credits</Form.Label>
+              <Form.Control
+                type="number"
+                name="credits"
+                value={editFormData.credits}
+                onChange={handleEditInputChange}
+                placeholder="Enter credit hours"
+                min="0"
+                max="20"
+              />
+              <Form.Text className="text-muted">
+                Credit hours for this module (0-20)
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Icon</Form.Label>
+              <Form.Select 
+                name="icon"
+                value={editFormData.icon}
+                onChange={handleEditInputChange}
+              >
+                {iconOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Form.Select>
+              <Form.Text className="text-muted">
+                Choose an icon to represent this module
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>
+                Color <span className="text-danger">*</span>
+              </Form.Label>
+              <div className="d-flex flex-wrap gap-2 mb-3">
+                {presetColors.map(color => (
+                  <div
+                    key={color.value}
+                    className={`color-swatch ${editFormData.color === color.value ? 'selected' : ''}`}
+                    style={{ backgroundColor: color.value }}
+                    onClick={() => handleEditColorSelect(color.value)}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+              <Form.Control
+                type="text"
+                name="color"
+                value={editFormData.color}
+                onChange={handleEditInputChange}
+                placeholder="#3B82F6"
+                pattern="^#[0-9A-Fa-f]{6}$"
+              />
+              <Form.Text className="text-muted">
+                Select a preset color or enter a custom hex color code (e.g., #3B82F6)
+              </Form.Text>
+            </Form.Group>
+
+            <div className="d-flex justify-content-end gap-2 mt-4">
+              <Button 
+                variant="outline-secondary"
+                onClick={handleCloseEditModal}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="btn-gradient-primary"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Updating...
+                  </>
+                ) : (
+                  '✓ Update Module'
                 )}
               </Button>
             </div>
