@@ -508,7 +508,11 @@ function Modules() {
               <Col key={module.id} xs={12} sm={6} md={4} lg={3}>
                 <Card 
                   className="module-card h-100 shadow-sm"
-                  style={{ borderLeft: `4px solid ${module.color}` }}
+                  style={{ 
+                    borderLeft: `4px solid ${module.color}`,
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => navigate(`/modules/${module.id}`)}
                 >
                   <Card.Body>
                     <div className="d-flex align-items-start justify-content-between mb-3">
@@ -543,7 +547,10 @@ function Modules() {
                         variant="outline-primary"
                         size="sm"
                         className="flex-grow-1"
-                        onClick={() => handleOpenEditModal(module)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditModal(module);
+                        }}
                       >
                         ✏️ Edit
                       </Button>
@@ -551,7 +558,10 @@ function Modules() {
                         variant="outline-danger"
                         size="sm"
                         className="flex-grow-1"
-                        onClick={() => handleOpenDeleteModal(module)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDeleteModal(module);
+                        }}
                       >
                         🗑️ Delete
                       </Button>

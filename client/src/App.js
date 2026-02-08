@@ -10,6 +10,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Assignments from './pages/Assignments';
 import Modules from './pages/Modules';
+import ModuleDetails from './pages/ModuleDetails';
 import Settings from './pages/Settings';
 
 // Protected Route component
@@ -72,6 +73,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Modules />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/modules/:id"
+            element={
+              <ProtectedRoute>
+                <ModuleDetails />
               </ProtectedRoute>
             }
           />
