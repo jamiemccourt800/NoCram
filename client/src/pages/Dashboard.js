@@ -721,7 +721,7 @@ function Dashboard() {
                 <Card.Body>
                   <Row>
                     {data.workload.breakdown.map(module => (
-                      <Col key={module.module_id} md={6} lg={4} className="mb-3">
+                      <Col key={module.module_id || 'unassigned'} md={6} lg={4} className="mb-3">
                         <div 
                           className="d-flex align-items-center gap-3 p-3 rounded" 
                           style={{ 

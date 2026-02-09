@@ -44,9 +44,9 @@ router.get('/', async (req, res) => {
       [req.user.id]
     );
 
-    // Workload breakdown by module
+    // Workload breakdown by module (including unassigned)
     const moduleBreakdownResult = await pool.query(
-      `SELECT 
+      `(SELECT 
          m.id,
          m.name,
          m.color,
@@ -58,7 +58,22 @@ router.get('/', async (req, res) => {
          AND a.due_date BETWEEN NOW() AND NOW() + INTERVAL '7 days'
        WHERE m.user_id = $1
        GROUP BY m.id, m.name, m.color
-       HAVING COALESCE(SUM(a.estimated_hours), 0) > 0
+       HAVING COALESCE(SUM(a.estimated_hours), 0) > 0)
+       
+       UNION ALL
+       
+       (SELECT 
+         NULL as id,
+         'Unassigned' as name,
+         '#6B7280' as color,
+         COALESCE(SUM(estimated_hours), 0) as hours
+       FROM assignments
+       WHERE user_id = $1
+         AND module_id IS NULL
+         AND status != 'done'
+         AND due_date BETWEEN NOW() AND NOW() + INTERVAL '7 days'
+       HAVING COALESCE(SUM(estimated_hours), 0) > 0)
+       
        ORDER BY hours DESC`,
       [req.user.id]
     );
