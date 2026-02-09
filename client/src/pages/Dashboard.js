@@ -554,6 +554,20 @@ function Dashboard() {
     });
   };
 
+  const calculateDaysOverdue = (dueDateString) => {
+    const dueDate = new Date(dueDateString);
+    const today = new Date();
+    
+    // Reset time to compare only dates
+    dueDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = today - dueDate;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
+  };
+
   const formatCompletionDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -596,10 +610,20 @@ function Dashboard() {
           <div className="d-flex align-items-center gap-3">
             <Button 
               variant="link"
-              className="text-decoration-none text-primary fw-bold"
+              className="text-decoration-none text-primary fw-bold position-relative"
               onClick={() => navigate('/dashboard')}
             >
               🏠 Dashboard
+              {data?.overdue && data.overdue.length > 0 && (
+                <Badge 
+                  bg="danger" 
+                  pill 
+                  className="position-absolute top-0 start-100 translate-middle"
+                  style={{ fontSize: '0.6rem' }}
+                >
+                  {data.overdue.length}
+                </Badge>
+              )}
             </Button>
             <Button 
               variant="link"
@@ -810,6 +834,13 @@ function Dashboard() {
                             {assignment.status === 'done' && assignment.completed_at && (
                               <div className="text-success small mt-1">
                                 {formatCompletionDate(assignment.completed_at)}
+                              </div>
+                            )}
+                            {assignment.status !== 'done' && (
+                              <div className="text-danger small mt-1 fw-bold">
+                                {calculateDaysOverdue(assignment.due_date) === 1 
+                                  ? '1 day overdue' 
+                                  : `${calculateDaysOverdue(assignment.due_date)} days overdue`}
                               </div>
                             )}
                           </div>
