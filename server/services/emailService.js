@@ -65,11 +65,13 @@ const sendReminderEmail = async (to, subject, assignment) => {
                   hour: '2-digit',
                   minute: '2-digit'
                 })}</p>
+                ${assignment.estimated_hours ? `<p><strong>Estimated Hours:</strong> ${assignment.estimated_hours} hours</p>` : ''}
+                ${assignment.weighting_percent ? `<p><strong>Weighting:</strong> ${assignment.weighting_percent}%</p>` : ''}
                 ${assignment.description ? `<p><strong>Description:</strong> ${assignment.description}</p>` : ''}
                 <p><strong>Status:</strong> ${assignment.status}</p>
               </div>
               <p>Don't forget to complete this assignment on time!</p>
-              <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/dashboard" class="button">View Dashboard</a>
+              <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/assignments" class="button">View Assignment</a>
             </div>
             <div class="footer">
               <p>You're receiving this email because you have email reminders enabled in NoCram.</p>
