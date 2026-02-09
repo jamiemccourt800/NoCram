@@ -191,7 +191,7 @@ router.get('/notification-preferences', authenticateToken, async (req, res) => {
 
 // PUT /api/auth/notification-preferences - Update notification preferences
 router.put('/notification-preferences', authenticateToken, async (req, res) => {
-  const { email_enabled, default_reminder_days } = req.body;
+  const { email_enabled, push_enabled, in_app_enabled, default_reminder_days } = req.body;
 
   try {
     // First check if preferences exist
@@ -204,19 +204,19 @@ router.put('/notification-preferences', authenticateToken, async (req, res) => {
     if (checkResult.rows.length === 0) {
       // Insert new preferences
       result = await pool.query(
-        `INSERT INTO notification_preferences (user_id, email_enabled, default_reminder_days, updated_at)
-         VALUES ($1, $2, $3, NOW())
-         RETURNING email_enabled, default_reminder_days`,
-        [req.user.id, email_enabled, default_reminder_days || '7,2,1']
+        `INSERT INTO notification_preferences (user_id, email_enabled, push_enabled, in_app_enabled, default_reminder_days, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         RETURNING email_enabled, push_enabled, in_app_enabled, default_reminder_days`,
+        [req.user.id, email_enabled, push_enabled ?? false, in_app_enabled ?? true, default_reminder_days || '7,2,1']
       );
     } else {
       // Update existing preferences
       result = await pool.query(
         `UPDATE notification_preferences 
-         SET email_enabled = $1, default_reminder_days = $2, updated_at = NOW()
-         WHERE user_id = $3
-         RETURNING email_enabled, default_reminder_days`,
-        [email_enabled, default_reminder_days || '7,2,1', req.user.id]
+         SET email_enabled = $1, push_enabled = $2, in_app_enabled = $3, default_reminder_days = $4, updated_at = NOW()
+         WHERE user_id = $5
+         RETURNING email_enabled, push_enabled, in_app_enabled, default_reminder_days`,
+        [email_enabled, push_enabled ?? false, in_app_enabled ?? true, default_reminder_days || '7,2,1', req.user.id]
       );
     }
 
