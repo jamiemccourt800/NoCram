@@ -1,5 +1,5 @@
 // client/src/pages/ModuleDetails.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Button, Modal, Form, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { modules as modulesApi, assignments as assignmentsApi } from '../services/api';
@@ -33,6 +33,17 @@ function ModuleDetails() {
   });
   
   const [validationErrors, setValidationErrors] = useState({});
+  
+  // Timeout refs for cleanup
+  const timeoutRefs = useRef([]);
+  
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(timeoutId => clearTimeout(timeoutId));
+      timeoutRefs.current = [];
+    };
+  }, []);
   
   // Load module and assignments
   useEffect(() => {
@@ -184,18 +195,22 @@ function ModuleDetails() {
       handleCloseModal();
       await loadModuleData();
       
-      setTimeout(() => {
+      const successTimeoutId = setTimeout(() => {
         setSuccessMessage('');
       }, 4000);
+      timeoutRefs.current.push(successTimeoutId);
       
     } catch (err) {
       console.error('Error creating assignment:', err);
       if (err.response?.status === 401) {
         setFormError('Session expired. Please log in again.');
-        setTimeout(() => {
+        const logoutTimeoutId = setTimeout(() => {
+          timeoutRefs.current.forEach(timeoutId => clearTimeout(timeoutId));
+          timeoutRefs.current = [];
           logout();
           navigate('/login');
         }, 2000);
+        timeoutRefs.current.push(logoutTimeoutId);
       } else if (err.response?.status === 400) {
         setFormError(err.response.data.error || 'Invalid assignment data');
       } else {
@@ -248,7 +263,15 @@ function ModuleDetails() {
   
   const isOverdue = (dueDate, status) => {
     if (status === 'Done') return false;
-    return new Date(dueDate) < new Date();
+    
+    // Normalize both dates to local date-only for accurate comparison
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    return due < now;
   };
   
   const handleLogout = () => {
