@@ -23,7 +23,7 @@ function Settings() {
     try {
       const prefsResponse = await api.get('/auth/notification-preferences');
       if (prefsResponse.data) {
-        setPreferences(prefsResponse.data);
+        setPreferences(prev => ({ ...prev, ...prefsResponse.data }));
       }
       setLoading(false);
     } catch (error) {

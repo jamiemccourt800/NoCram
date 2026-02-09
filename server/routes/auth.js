@@ -207,7 +207,7 @@ router.put('/notification-preferences', authenticateToken, async (req, res) => {
         `INSERT INTO notification_preferences (user_id, email_enabled, push_enabled, in_app_enabled, default_reminder_days, updated_at)
          VALUES ($1, $2, $3, $4, $5, NOW())
          RETURNING email_enabled, push_enabled, in_app_enabled, default_reminder_days`,
-        [req.user.id, email_enabled, push_enabled ?? false, in_app_enabled ?? true, default_reminder_days || '7,2,1']
+        [req.user.id, email_enabled ?? true, push_enabled ?? false, in_app_enabled ?? true, default_reminder_days || '7,2,1']
       );
     } else {
       // Update existing preferences
