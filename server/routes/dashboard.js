@@ -101,7 +101,11 @@ router.get('/', async (req, res) => {
           hours: parseFloat(row.hours)
         }))
       },
-      stats: statsResult.rows[0],
+      stats: {
+        not_started: parseInt(statsResult.rows[0].not_started),
+        in_progress: parseInt(statsResult.rows[0].in_progress),
+        done: parseInt(statsResult.rows[0].done)
+      },
     });
   } catch (error) {
     console.error('Dashboard error:', error);

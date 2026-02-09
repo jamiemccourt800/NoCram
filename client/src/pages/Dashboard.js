@@ -678,34 +678,74 @@ function Dashboard() {
           </div>
         </div>
 
-        <Row className="mb-5 g-4">
-          <Col md={4}>
+        {/* Assignment Statistics */}
+        <Row className="mb-4 g-4">
+          <Col md={6} lg>
+            <div className="stat-card text-center">
+              <div className="stat-number">
+                {data.stats.not_started + data.stats.in_progress + data.stats.done}
+              </div>
+              <div className="stat-label">📊 Total Assignments</div>
+            </div>
+          </Col>
+          <Col md={6} lg>
             <div className="stat-card text-center">
               <div className="stat-number">{data.stats.not_started}</div>
               <div className="stat-label">📋 Not Started</div>
             </div>
           </Col>
-          <Col md={4}>
+          <Col md={6} lg>
             <div className="stat-card text-center">
               <div className="stat-number">{data.stats.in_progress}</div>
               <div className="stat-label">⚡ In Progress</div>
             </div>
           </Col>
-          <Col md={4}>
-            <div className={`stat-card text-center ${data.workload.total_hours > 40 ? 'workload-warning' : data.workload.total_hours > 30 ? 'workload-caution' : ''}`}>
+          <Col md={6} lg>
+            <div className="stat-card text-center">
+              <div className="stat-number">{data.stats.done}</div>
+              <div className="stat-label">✅ Completed</div>
+            </div>
+          </Col>
+          <Col md={6} lg>
+            <div className="stat-card text-center">
               <div className="stat-number">
-                {data.workload.total_hours}h
-                {data.workload.total_hours > 40 && (
-                  <span className="ms-2" style={{ fontSize: '0.6em' }}>⚠️</span>
+                {data.stats.not_started + data.stats.in_progress + data.stats.done > 0
+                  ? Math.round((data.stats.done / (data.stats.not_started + data.stats.in_progress + data.stats.done)) * 100)
+                  : 0}%
+              </div>
+              <div className="stat-label">📈 Completion Rate</div>
+            </div>
+          </Col>
+        </Row>
+
+        {/* Workload Card */}
+        <Row className="mb-4">
+          <Col>
+            <div className={`stat-card text-center ${data.workload.total_hours > 40 ? 'workload-warning' : data.workload.total_hours > 30 ? 'workload-caution' : ''}`}>
+              <div className="d-flex justify-content-center align-items-center gap-3">
+                <div>
+                  <div className="stat-number" style={{ fontSize: '2.5rem' }}>
+                    {data.workload.total_hours}h
+                    {data.workload.total_hours > 40 && (
+                      <span className="ms-2" style={{ fontSize: '0.6em' }}>⚠️</span>
+                    )}
+                  </div>
+                  <div className="stat-label">📅 This Week's Workload</div>
+                </div>
+                {data.workload.total_hours > 0 && (
+                  <div className="text-muted small" style={{ maxWidth: '300px', textAlign: 'left' }}>
+                    {data.workload.total_hours > 40 && (
+                      <div className="text-danger fw-bold">⚠️ High workload detected! Consider prioritizing tasks.</div>
+                    )}
+                    {data.workload.total_hours > 30 && data.workload.total_hours <= 40 && (
+                      <div className="text-warning">📌 Busy week ahead. Plan your time wisely.</div>
+                    )}
+                    {data.workload.total_hours <= 30 && (
+                      <div>Manageable workload for the week.</div>
+                    )}
+                  </div>
                 )}
               </div>
-              <div className="stat-label">📅 This Week's Workload</div>
-              {data.workload.total_hours > 40 && (
-                <small className="text-danger d-block mt-2 fw-bold">High workload!</small>
-              )}
-              {data.workload.total_hours > 30 && data.workload.total_hours <= 40 && (
-                <small className="text-warning d-block mt-2">Busy week ahead</small>
-              )}
             </div>
           </Col>
         </Row>
