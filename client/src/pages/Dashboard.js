@@ -692,12 +692,65 @@ function Dashboard() {
             </div>
           </Col>
           <Col md={4}>
-            <div className="stat-card text-center">
-              <div className="stat-number">{data.workload.total_hours}h</div>
-              <div className="stat-label">📅 This Week</div>
+            <div className={`stat-card text-center ${data.workload.total_hours > 40 ? 'workload-warning' : data.workload.total_hours > 30 ? 'workload-caution' : ''}`}>
+              <div className="stat-number">
+                {data.workload.total_hours}h
+                {data.workload.total_hours > 40 && (
+                  <span className="ms-2" style={{ fontSize: '0.6em' }}>⚠️</span>
+                )}
+              </div>
+              <div className="stat-label">📅 This Week's Workload</div>
+              {data.workload.total_hours > 40 && (
+                <small className="text-danger d-block mt-2 fw-bold">High workload!</small>
+              )}
+              {data.workload.total_hours > 30 && data.workload.total_hours <= 40 && (
+                <small className="text-warning d-block mt-2">Busy week ahead</small>
+              )}
             </div>
           </Col>
         </Row>
+
+        {/* Workload Breakdown Section */}
+        {data.workload.breakdown && data.workload.breakdown.length > 0 && (
+          <Row className="mt-4 mb-4">
+            <Col>
+              <Card className="shadow-sm">
+                <Card.Header className="bg-light">
+                  <h6 className="mb-0">📊 Workload Breakdown by Module</h6>
+                </Card.Header>
+                <Card.Body>
+                  <Row>
+                    {data.workload.breakdown.map(module => (
+                      <Col key={module.module_id} md={6} lg={4} className="mb-3">
+                        <div 
+                          className="d-flex align-items-center gap-3 p-3 rounded" 
+                          style={{ 
+                            backgroundColor: `${module.module_color}15`,
+                            border: `2px solid ${module.module_color}`
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '12px',
+                              height: '12px',
+                              borderRadius: '50%',
+                              backgroundColor: module.module_color,
+                              flexShrink: 0
+                            }}
+                          />
+                          <div className="flex-grow-1">
+                            <div className="fw-bold text-truncate">{module.module_name}</div>
+                            <small className="text-muted">{module.hours}h estimated</small>
+                          </div>
+                        </div>
+                      </Col>
+                    ))}
+                  </Row>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        )}
 
         <Row className="g-4">
           <Col lg={6}>

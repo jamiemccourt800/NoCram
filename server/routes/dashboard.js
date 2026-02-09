@@ -44,6 +44,25 @@ router.get('/', async (req, res) => {
       [req.user.id]
     );
 
+    // Workload breakdown by module
+    const moduleBreakdownResult = await pool.query(
+      `SELECT 
+         m.id,
+         m.name,
+         m.color,
+         COALESCE(SUM(a.estimated_hours), 0) as hours
+       FROM modules m
+       LEFT JOIN assignments a ON m.id = a.module_id 
+         AND a.user_id = $1
+         AND a.status != 'done'
+         AND a.due_date BETWEEN NOW() AND NOW() + INTERVAL '7 days'
+       WHERE m.user_id = $1
+       GROUP BY m.id, m.name, m.color
+       HAVING COALESCE(SUM(a.estimated_hours), 0) > 0
+       ORDER BY hours DESC`,
+      [req.user.id]
+    );
+
     // Total assignments by status
     const statsResult = await pool.query(
       `SELECT 
@@ -60,6 +79,12 @@ router.get('/', async (req, res) => {
       overdue: overdueResult.rows,
       workload: {
         total_hours: parseFloat(workloadResult.rows[0].total_hours),
+        breakdown: moduleBreakdownResult.rows.map(row => ({
+          module_id: row.id,
+          module_name: row.name,
+          module_color: row.color,
+          hours: parseFloat(row.hours)
+        }))
       },
       stats: statsResult.rows[0],
     });
