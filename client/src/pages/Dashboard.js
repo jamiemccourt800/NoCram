@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, ListGroup, Badge, Spinner, Alert, Button, Modal, Form, Dropdown, ButtonGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { dashboard, assignments, modules as modulesApi } from '../services/api';
+import { dashboard, assignments, modules as modulesApi, auth } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import '../styles/custom.css';
 
@@ -56,9 +56,14 @@ function Dashboard() {
   const [deletingAssignment, setDeletingAssignment] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Semester filter state
+  const [userProfile, setUserProfile] = useState(null);
+  const [semesterFilterActive, setSemesterFilterActive] = useState(false);
+
   useEffect(() => {
     loadDashboard();
     loadModules();
+    loadUserProfile();
   }, []);
 
   const loadDashboard = async () => {
@@ -82,6 +87,30 @@ function Dashboard() {
     } finally {
       setLoadingModules(false);
     }
+  };
+
+  const loadUserProfile = async () => {
+    try {
+      const response = await auth.getCurrentUser();
+      setUserProfile(response.data.user);
+    } catch (err) {
+      console.error('Failed to load user profile:', err);
+    }
+  };
+
+  const filterAssignmentsBySemester = (assignmentsList) => {
+    // Return early if no list provided or filter is inactive
+    if (!assignmentsList || !semesterFilterActive || !userProfile?.semester_start || !userProfile?.semester_end) {
+      return assignmentsList || [];
+    }
+
+    const semesterStart = new Date(userProfile.semester_start);
+    const semesterEnd = new Date(userProfile.semester_end);
+
+    return assignmentsList.filter(assignment => {
+      const dueDate = new Date(assignment.due_date);
+      return dueDate >= semesterStart && dueDate <= semesterEnd;
+    });
   };
 
   const handleOpenModal = () => {
@@ -668,13 +697,23 @@ function Dashboard() {
               <h2 className="dashboard-title">Your Dashboard</h2>
               <p className="dashboard-subtitle">Track your assignments and stay on top of deadlines</p>
             </div>
-            <Button 
-              className="btn-gradient-primary"
-              size="lg"
-              onClick={handleOpenModal}
-            >
-              ➕ Add Assignment
-            </Button>
+            <div className="d-flex gap-2">
+              {userProfile?.semester_start && userProfile?.semester_end && (
+                <Button 
+                  variant={semesterFilterActive ? "primary" : "outline-primary"}
+                  onClick={() => setSemesterFilterActive(!semesterFilterActive)}
+                >
+                  {semesterFilterActive ? '📅 Current Semester' : '📅 Filter by Semester'}
+                </Button>
+              )}
+              <Button 
+                className="btn-gradient-primary"
+                size="lg"
+                onClick={handleOpenModal}
+              >
+                ➕ Add Assignment
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -799,13 +838,13 @@ function Dashboard() {
                 <h5>🗓️ Upcoming (Next 7 Days)</h5>
               </div>
               <div>
-                {data.upcoming.length === 0 ? (
+                {filterAssignmentsBySemester(data.upcoming).length === 0 ? (
                   <div className="empty-state">
                     <div className="empty-state-icon">✨</div>
                     <div className="empty-state-text">No upcoming deadlines</div>
                   </div>
                 ) : (
-                  data.upcoming.map((assignment) => (
+                  filterAssignmentsBySemester(data.upcoming).map((assignment) => (
                     <div key={assignment.id} className={`assignment-list-item ${assignment.status === 'done' ? 'completed' : ''}`}>
                       <div className="d-flex justify-content-between align-items-start">
                         <div className="d-flex align-items-start gap-3 flex-grow-1">
@@ -898,13 +937,13 @@ function Dashboard() {
                 <h5>⚠️ Overdue</h5>
               </div>
               <div>
-                {data.overdue.length === 0 ? (
+                {filterAssignmentsBySemester(data.overdue).length === 0 ? (
                   <div className="empty-state">
                     <div className="empty-state-icon">🎉</div>
                     <div className="empty-state-text">No overdue assignments!</div>
                   </div>
                 ) : (
-                  data.overdue.map((assignment) => (
+                  filterAssignmentsBySemester(data.overdue).map((assignment) => (
                     <div key={assignment.id} className={`assignment-list-item ${assignment.status === 'done' ? 'completed' : ''}`}>
                       <div className="d-flex justify-content-between align-items-start">
                         <div className="d-flex align-items-start gap-3 flex-grow-1">
