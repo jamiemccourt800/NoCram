@@ -23,12 +23,12 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle token expiration
+// Handle token expiration and authentication errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 403) {
-      // Token expired - redirect to login
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Token expired or invalid - redirect to login
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
       window.location.href = '/login';

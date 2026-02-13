@@ -22,6 +22,15 @@ function Settings() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [pendingProfileUpdate, setPendingProfileUpdate] = useState(null);
   
+  // Password change state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
+  
   // Notification preferences state
   const [preferences, setPreferences] = useState({
     email_enabled: true,
@@ -56,17 +65,23 @@ function Settings() {
           semester_end: userData.semester_end || '',
         });
         setOriginalEmail(userData.email);
-      }
-      
-      // Fetch notification preferences (only if profile fetch succeeds)
-      try {
-        const prefsResponse = await api.get('/auth/notification-preferences');
-        if (prefsResponse.data) {
-          setPreferences(prev => ({ ...prev, ...prefsResponse.data }));
+        
+        // Fetch notification preferences (only if profile fetch succeeds)
+        try {
+          const prefsResponse = await api.get('/auth/notification-preferences');
+          if (prefsResponse.data) {
+            setPreferences(prev => ({ ...prev, ...prefsResponse.data }));
+          }
+        } catch (error) {
+          console.error('Error fetching preferences:', error);
+          // Preferences can fail gracefully - use defaults
         }
-      } catch (error) {
-        console.error('Error fetching preferences:', error);
-        // Preferences can fail gracefully - use defaults
+      } else {
+        // Handle missing user data
+        setProfileMessage({ 
+          type: 'danger', 
+          text: 'Failed to load user profile. Please try refreshing the page.' 
+        });
       }
       
       setLoading(false);
@@ -129,6 +144,8 @@ function Settings() {
           name: response.data.user.name || '',
           email: response.data.user.email || '',
           timezone: response.data.user.timezone || 'UTC',
+          semester_start: response.data.user.semester_start || '',
+          semester_end: response.data.user.semester_end || '',
         });
         setOriginalEmail(response.data.user.email);
       }
@@ -183,6 +200,69 @@ function Settings() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordMessage({ type: '', text: '' });
+
+    // Validation
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordMessage({ type: 'danger', text: 'All fields are required' });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordMessage({ type: 'danger', text: 'New password must be at least 6 characters' });
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMessage({ type: 'danger', text: 'New passwords do not match' });
+      return;
+    }
+
+    setSavingPassword(true);
+
+    try {
+      await api.put('/auth/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      setPasswordMessage({ type: 'success', text: 'Password changed successfully! Logging out...' });
+      
+      // Clear form
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+
+      // Log out user after 2 seconds
+      setTimeout(() => {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        navigate('/login');
+      }, 2000);
+    } catch (error) {
+      console.error('Error changing password:', error);
+      if (error.response?.status === 401) {
+        setPasswordMessage({ type: 'danger', text: 'Current password is incorrect' });
+      } else {
+        setPasswordMessage({ type: 'danger', text: error.response?.data?.error || 'Failed to change password' });
+      }
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   if (loading) {
@@ -350,6 +430,93 @@ function Settings() {
                 '💾 Save Profile'
               )}
             </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Change Password Section */}
+      <div className="settings-card">
+        <h3 className="mb-4" style={{fontWeight: 600}}>🔒 Change Password</h3>
+
+        {passwordMessage.text && (
+          <div className={`alert alert-custom alert-${passwordMessage.type} mb-4`} role="alert">
+            {passwordMessage.text}
+            <button 
+              type="button" 
+              className="btn-close" 
+              onClick={() => setPasswordMessage({ type: '', text: '' })}
+            ></button>
+          </div>
+        )}
+
+        <form onSubmit={handlePasswordSubmit}>
+          <div className="mb-4">
+            <label htmlFor="currentPassword" className="form-label-custom">
+              <strong>🔑 Current Password</strong>
+            </label>
+            <input
+              type="password"
+              className="form-control form-control-custom"
+              id="currentPassword"
+              name="currentPassword"
+              value={passwordForm.currentPassword}
+              onChange={handlePasswordChange}
+              placeholder="Enter your current password"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="newPassword" className="form-label-custom">
+              <strong>🆕 New Password</strong>
+            </label>
+            <input
+              type="password"
+              className="form-control form-control-custom"
+              id="newPassword"
+              name="newPassword"
+              value={passwordForm.newPassword}
+              onChange={handlePasswordChange}
+              placeholder="Enter new password (minimum 6 characters)"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="confirmPassword" className="form-label-custom">
+              <strong>✅ Confirm New Password</strong>
+            </label>
+            <input
+              type="password"
+              className="form-control form-control-custom"
+              id="confirmPassword"
+              name="confirmPassword"
+              value={passwordForm.confirmPassword}
+              onChange={handlePasswordChange}
+              placeholder="Confirm your new password"
+              required
+            />
+          </div>
+
+          <div className="d-grid gap-2">
+            <button 
+              type="submit" 
+              className="btn btn-gradient-primary"
+              disabled={savingPassword}
+            >
+              {savingPassword ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Changing Password...
+                </>
+              ) : (
+                '🔒 Change Password'
+              )}
+            </button>
+          </div>
+
+          <div className="form-text text-warning mt-3">
+            ⚠️ After changing your password, you will be logged out and must log in again with your new password.
           </div>
         </form>
       </div>

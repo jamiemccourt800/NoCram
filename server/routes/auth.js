@@ -242,6 +242,14 @@ router.put('/profile', authenticateToken, async (req, res) => {
 
     // If email is being changed, require password confirmation
     if (email && email !== currentUser.email) {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ 
+          error: 'Invalid email format' 
+        });
+      }
+
       if (!currentPassword) {
         return res.status(400).json({ 
           error: 'Password confirmation required to change email' 
@@ -327,6 +335,62 @@ router.put('/profile', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating profile:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /api/auth/change-password - Change user password
+router.put('/change-password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    // Validation
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        error: 'Current password and new password are required' 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        error: 'New password must be at least 6 characters' 
+      });
+    }
+
+    // Get current user
+    const userResult = await pool.query(
+      'SELECT password_hash FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Verify current password
+    const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const newPasswordHash = await bcrypt.hash(newPassword, salt);
+
+    // Update password in database
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [newPasswordHash, req.user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

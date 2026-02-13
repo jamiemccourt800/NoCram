@@ -70,10 +70,15 @@ function Dashboard() {
     try {
       const response = await dashboard.getData();
       setData(response.data);
-    } catch (err) {
-      setError('Failed to load dashboard');
-    } finally {
       setLoading(false);
+    } catch (err) {
+      // Auth errors (401/403) are handled by API interceptor
+      // Only handle other errors here
+      if (err.response?.status !== 401 && err.response?.status !== 403) {
+        setError('Failed to load dashboard');
+        setLoading(false);
+      }
+      // For auth errors, interceptor will redirect - don't set state
     }
   };
 

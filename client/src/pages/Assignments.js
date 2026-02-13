@@ -25,6 +25,14 @@ function Assignments() {
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showCompleted, setShowCompleted] = useState(true); // Show completed by default
 
+  // Sort state with localStorage persistence
+  const [sortBy, setSortBy] = useState(() => {
+    return localStorage.getItem('assignmentsSortBy') || 'due_date';
+  });
+  const [sortOrder, setSortOrder] = useState(() => {
+    return localStorage.getItem('assignmentsSortOrder') || 'asc';
+  });
+
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState(null);
@@ -53,7 +61,13 @@ function Assignments() {
 
   useEffect(() => {
     applyFilters();
-  }, [assignments, searchQuery, filterModule, filterStatus, filterDateFrom, filterDateTo, showCompleted]);
+  }, [assignments, searchQuery, filterModule, filterStatus, filterDateFrom, filterDateTo, showCompleted, sortBy, sortOrder]);
+
+  // Persist sort preferences to localStorage
+  useEffect(() => {
+    localStorage.setItem('assignmentsSortBy', sortBy);
+    localStorage.setItem('assignmentsSortOrder', sortOrder);
+  }, [sortBy, sortOrder]);
 
   const loadData = async () => {
     try {
@@ -138,6 +152,9 @@ function Assignments() {
       filtered = filtered.filter(assignment => assignment.status !== 'done');
     }
 
+    // Apply sorting
+    filtered = applySorting(filtered);
+
     setFilteredAssignments(filtered);
   };
 
@@ -151,6 +168,82 @@ function Assignments() {
 
   const hasActiveFilters = () => {
     return searchQuery || filterModule || filterStatus || filterDateFrom || filterDateTo;
+  };
+
+  const applySorting = (list) => {
+    const sorted = [...list];
+    
+    sorted.sort((a, b) => {
+      let compareA, compareB;
+      
+      switch (sortBy) {
+        case 'due_date':
+          compareA = new Date(a.due_date).getTime();
+          compareB = new Date(b.due_date).getTime();
+          break;
+          
+        case 'title':
+          compareA = a.title.toLowerCase();
+          compareB = b.title.toLowerCase();
+          break;
+          
+        case 'module':
+          compareA = a.module_name?.toLowerCase() || 'zzz'; // Put unassigned at end
+          compareB = b.module_name?.toLowerCase() || 'zzz';
+          break;
+          
+        case 'weighting':
+          compareA = parseFloat(a.weighting_percent) || 0;
+          compareB = parseFloat(b.weighting_percent) || 0;
+          break;
+          
+        case 'estimated_hours':
+          compareA = parseFloat(a.estimated_hours) || 0;
+          compareB = parseFloat(b.estimated_hours) || 0;
+          break;
+          
+        case 'status':
+          // Custom order: not_started, in_progress, done
+          const statusOrder = { 'not_started': 0, 'in_progress': 1, 'done': 2 };
+          compareA = statusOrder[a.status] ?? 3;
+          compareB = statusOrder[b.status] ?? 3;
+          break;
+          
+        default:
+          compareA = new Date(a.due_date).getTime();
+          compareB = new Date(b.due_date).getTime();
+      }
+      
+      // Compare and apply sort order
+      if (compareA < compareB) return sortOrder === 'asc' ? -1 : 1;
+      if (compareA > compareB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    return sorted;
+  };
+
+  const handleSortChange = (newSortBy) => {
+    if (sortBy === newSortBy) {
+      // Toggle sort order if clicking same field
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortBy(newSortBy);
+      setSortOrder('asc');
+    }
+  };
+
+  const getSortLabel = (field) => {
+    const labels = {
+      'due_date': 'Due Date',
+      'title': 'Title',
+      'module': 'Module',
+      'weighting': 'Weighting',
+      'estimated_hours': 'Estimated Hours',
+      'status': 'Status'
+    };
+    return labels[field] || field;
   };
 
   const handleOpenEditModal = (assignment) => {
@@ -697,6 +790,77 @@ function Assignments() {
                   onChange={(e) => setShowCompleted(e.target.checked)}
                   className="text-muted"
                 />
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+
+        {/* Sort Controls */}
+        <Card className="shadow-sm">
+          <Card.Body>
+            <Row className="align-items-center">
+              <Col xs="auto">
+                <strong className="text-muted">Sort by:</strong>
+              </Col>
+              <Col xs="auto">
+                <Dropdown as={ButtonGroup}>
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm"
+                    onClick={() => handleSortChange(sortBy)}
+                  >
+                    {getSortLabel(sortBy)} {sortOrder === 'asc' ? '↑' : '↓'}
+                  </Button>
+                  <Dropdown.Toggle 
+                    split 
+                    variant="outline-primary" 
+                    size="sm"
+                    id="sort-dropdown"
+                  />
+                  <Dropdown.Menu>
+                    <Dropdown.Item 
+                      onClick={() => handleSortChange('due_date')}
+                      active={sortBy === 'due_date'}
+                    >
+                      📅 Due Date {sortBy === 'due_date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </Dropdown.Item>
+                    <Dropdown.Item 
+                      onClick={() => handleSortChange('title')}
+                      active={sortBy === 'title'}
+                    >
+                      📝 Title {sortBy === 'title' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </Dropdown.Item>
+                    <Dropdown.Item 
+                      onClick={() => handleSortChange('module')}
+                      active={sortBy === 'module'}
+                    >
+                      📚 Module {sortBy === 'module' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </Dropdown.Item>
+                    <Dropdown.Item 
+                      onClick={() => handleSortChange('weighting')}
+                      active={sortBy === 'weighting'}
+                    >
+                      ⚖️ Weighting {sortBy === 'weighting' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </Dropdown.Item>
+                    <Dropdown.Item 
+                      onClick={() => handleSortChange('estimated_hours')}
+                      active={sortBy === 'estimated_hours'}
+                    >
+                      ⏱️ Estimated Hours {sortBy === 'estimated_hours' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </Dropdown.Item>
+                    <Dropdown.Item 
+                      onClick={() => handleSortChange('status')}
+                      active={sortBy === 'status'}
+                    >
+                      📊 Status {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              </Col>
+              <Col xs="auto">
+                <span className="text-muted small">
+                  {filteredAssignments.length} assignment{filteredAssignments.length !== 1 ? 's' : ''}
+                </span>
               </Col>
             </Row>
           </Card.Body>
