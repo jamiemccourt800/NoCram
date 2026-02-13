@@ -168,13 +168,20 @@ function Assignments() {
     setQuickDateFilter('');
   };
 
+  const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const applyQuickDateFilter = (filterType) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
     switch (filterType) {
       case 'today':
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = formatLocalDate(today);
         setFilterDateFrom(todayStr);
         setFilterDateTo(todayStr);
         setQuickDateFilter('today');
@@ -191,8 +198,8 @@ function Assignments() {
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         
-        setFilterDateFrom(startOfWeek.toISOString().split('T')[0]);
-        setFilterDateTo(endOfWeek.toISOString().split('T')[0]);
+        setFilterDateFrom(formatLocalDate(startOfWeek));
+        setFilterDateTo(formatLocalDate(endOfWeek));
         setQuickDateFilter('week');
         break;
         
@@ -203,8 +210,8 @@ function Assignments() {
         // End of month
         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         
-        setFilterDateFrom(startOfMonth.toISOString().split('T')[0]);
-        setFilterDateTo(endOfMonth.toISOString().split('T')[0]);
+        setFilterDateFrom(formatLocalDate(startOfMonth));
+        setFilterDateTo(formatLocalDate(endOfMonth));
         setQuickDateFilter('month');
         break;
         
