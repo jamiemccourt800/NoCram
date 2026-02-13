@@ -24,6 +24,7 @@ function Assignments() {
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showCompleted, setShowCompleted] = useState(true); // Show completed by default
+  const [quickDateFilter, setQuickDateFilter] = useState(''); // Track active quick filter
 
   // Sort state with localStorage persistence
   const [sortBy, setSortBy] = useState(() => {
@@ -164,6 +165,70 @@ function Assignments() {
     setFilterStatus('');
     setFilterDateFrom('');
     setFilterDateTo('');
+    setQuickDateFilter('');
+  };
+
+  const applyQuickDateFilter = (filterType) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    switch (filterType) {
+      case 'today':
+        const todayStr = today.toISOString().split('T')[0];
+        setFilterDateFrom(todayStr);
+        setFilterDateTo(todayStr);
+        setQuickDateFilter('today');
+        break;
+        
+      case 'week':
+        // Start of week (Monday)
+        const startOfWeek = new Date(today);
+        const day = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+        startOfWeek.setDate(diff);
+        
+        // End of week (Sunday)
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        
+        setFilterDateFrom(startOfWeek.toISOString().split('T')[0]);
+        setFilterDateTo(endOfWeek.toISOString().split('T')[0]);
+        setQuickDateFilter('week');
+        break;
+        
+      case 'month':
+        // Start of month
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        // End of month
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        setFilterDateFrom(startOfMonth.toISOString().split('T')[0]);
+        setFilterDateTo(endOfMonth.toISOString().split('T')[0]);
+        setQuickDateFilter('month');
+        break;
+        
+      case 'custom':
+        setQuickDateFilter('custom');
+        break;
+        
+      default:
+        setFilterDateFrom('');
+        setFilterDateTo('');
+        setQuickDateFilter('');
+    }
+  };
+
+  const handleManualDateChange = (field, value) => {
+    if (field === 'from') {
+      setFilterDateFrom(value);
+    } else {
+      setFilterDateTo(value);
+    }
+    // Switch to custom when user manually changes dates
+    if (value && quickDateFilter !== 'custom') {
+      setQuickDateFilter('custom');
+    }
   };
 
   const hasActiveFilters = () => {
@@ -180,6 +245,9 @@ function Assignments() {
         case 'due_date':
           compareA = new Date(a.due_date).getTime();
           compareB = new Date(b.due_date).getTime();
+          // Guard against invalid dates - sort them to the end
+          if (!Number.isFinite(compareA)) compareA = Infinity;
+          if (!Number.isFinite(compareB)) compareB = Infinity;
           break;
           
         case 'title':
@@ -742,13 +810,62 @@ function Assignments() {
                   <option value="overdue">Overdue</option>
                 </Form.Select>
               </Col>
+            </Row>
 
+            {/* Quick Date Filters */}
+            <Row className="mt-3">
+              <Col md={12}>
+                <Form.Label className="form-label-custom small">Quick Date Filters</Form.Label>
+                <ButtonGroup size="sm" className="d-flex flex-wrap gap-2">
+                  <Button 
+                    variant={quickDateFilter === 'today' ? 'primary' : 'outline-primary'}
+                    onClick={() => applyQuickDateFilter('today')}
+                    style={{ flex: '1 1 auto' }}
+                  >
+                    📅 Today
+                  </Button>
+                  <Button 
+                    variant={quickDateFilter === 'week' ? 'primary' : 'outline-primary'}
+                    onClick={() => applyQuickDateFilter('week')}
+                    style={{ flex: '1 1 auto' }}
+                  >
+                    📆 This Week
+                  </Button>
+                  <Button 
+                    variant={quickDateFilter === 'month' ? 'primary' : 'outline-primary'}
+                    onClick={() => applyQuickDateFilter('month')}
+                    style={{ flex: '1 1 auto' }}
+                  >
+                    🗓️ This Month
+                  </Button>
+                  <Button 
+                    variant={quickDateFilter === 'custom' ? 'primary' : 'outline-primary'}
+                    onClick={() => applyQuickDateFilter('custom')}
+                    style={{ flex: '1 1 auto' }}
+                  >
+                    ✏️ Custom Range
+                  </Button>
+                  {quickDateFilter && (
+                    <Button 
+                      variant="outline-secondary"
+                      onClick={() => applyQuickDateFilter('')}
+                      style={{ flex: '1 1 auto' }}
+                    >
+                      ✕ Clear Date Filter
+                    </Button>
+                  )}
+                </ButtonGroup>
+              </Col>
+            </Row>
+
+            {/* Date Range Inputs */}
+            <Row className="mt-3">
               <Col md={2}>
                 <Form.Label className="form-label-custom small">From Date</Form.Label>
                 <Form.Control
                   type="date"
                   value={filterDateFrom}
-                  onChange={(e) => setFilterDateFrom(e.target.value)}
+                  onChange={(e) => handleManualDateChange('from', e.target.value)}
                   className="form-control-custom"
                   size="sm"
                 />
@@ -759,7 +876,7 @@ function Assignments() {
                 <Form.Control
                   type="date"
                   value={filterDateTo}
-                  onChange={(e) => setFilterDateTo(e.target.value)}
+                  onChange={(e) => handleManualDateChange('to', e.target.value)}
                   className="form-control-custom"
                   size="sm"
                 />

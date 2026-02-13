@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Button } from 'react-bootstrap';
 import api from '../services/api';
@@ -6,6 +6,7 @@ import '../styles/custom.css';
 
 function Settings() {
   const navigate = useNavigate();
+  const logoutTimeoutRef = useRef(null);
   
   // Profile state
   const [profile, setProfile] = useState({
@@ -47,6 +48,13 @@ function Settings() {
 
   useEffect(() => {
     fetchData();
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (logoutTimeoutRef.current) {
+        clearTimeout(logoutTimeoutRef.current);
+      }
+    };
   }, []);
 
   const fetchData = async () => {
@@ -248,8 +256,8 @@ function Settings() {
       });
 
       // Log out user after 2 seconds
-      setTimeout(() => {
-        localStorage.removeItem('accessToken');
+      logoutTimeoutRef.current = setTimeout(() => {
+        localStorage.removeItem('token');
         localStorage.removeItem('user');
         navigate('/login');
       }, 2000);
@@ -451,13 +459,13 @@ function Settings() {
 
         <form onSubmit={handlePasswordSubmit}>
           <div className="mb-4">
-            <label htmlFor="currentPassword" className="form-label-custom">
+            <label htmlFor="currentPasswordSettings" className="form-label-custom">
               <strong>🔑 Current Password</strong>
             </label>
             <input
               type="password"
               className="form-control form-control-custom"
-              id="currentPassword"
+              id="currentPasswordSettings"
               name="currentPassword"
               value={passwordForm.currentPassword}
               onChange={handlePasswordChange}
@@ -665,13 +673,13 @@ function Settings() {
             To change your email address, please enter your current password for verification.
           </p>
           <div className="mb-3">
-            <label htmlFor="currentPassword" className="form-label">
+            <label htmlFor="currentPasswordModal" className="form-label">
               <strong>Current Password</strong>
             </label>
             <input
               type="password"
               className="form-control"
-              id="currentPassword"
+              id="currentPasswordModal"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               placeholder="Enter your password"
